@@ -10,6 +10,18 @@ import type { PhotoGateway, SavedPhoto } from "../../application/photo-gateway";
 import type { LocalCompositionDraftStore } from "../../application/compositions/local-composition-draft-store";
 import { assignCompositionPhoto, removeCompositionPhoto } from "../../application/compositions/edit-composition-photo";
 import { refreshCompositionPreviews } from "../../application/compositions/restore-composition-draft";
+import { exportComposition } from "../../application/compositions/export-composition";
+import type {
+  CompositionExportPhase,
+  CompositionExportProgress,
+  CompositionExportRenderer,
+} from "../../application/compositions/composition-export-renderer";
+import type {
+  CompositionExportErrorCode,
+  CompositionExportOptions,
+} from "../../domain/compositions/composition-export";
+import { CompositionExportError } from "../../domain/compositions/composition-export";
+import { createCanvasCompositionExportRenderer } from "../../infrastructure/canvas-composition-export-renderer";
 import { localCompositionDraftStore } from "../../infrastructure/local-composition-draft-store";
 import { photoApiGateway } from "../../infrastructure/photo-api-gateway";
 import { BrandHeader } from "./brand-header";
@@ -21,6 +33,7 @@ export type CompositionEditorProps = {
   draftId: string;
   draftStore?: Pick<LocalCompositionDraftStore, "get" | "save">;
   photoGateway?: Pick<PhotoGateway, "listPhotos">;
+  compositionExportRenderer?: CompositionExportRenderer;
   onNavigate?: (href: string) => void;
 };
 
@@ -55,6 +68,7 @@ export function CompositionEditor({
   draftId,
   draftStore = localCompositionDraftStore,
   photoGateway = photoApiGateway,
+  compositionExportRenderer,
   onNavigate,
 }: CompositionEditorProps) {
   const [loadState, setLoadState] = useState<EditorLoadState>("loading");
@@ -74,6 +88,18 @@ export function CompositionEditor({
   const [announcement, setAnnouncement] = useState("");
   const [refreshingPreviews, setRefreshingPreviews] = useState(false);
   const [refreshError, setRefreshError] = useState(false);
+  const [exportFormat, setExportFormat] = useState<CompositionExportOptions["format"]>("image/png");
+  const [jpegQuality, setJpegQuality] = useState(0.92);
+  const [exportPhase, setExportPhase] = useState<CompositionExportPhase | "IDLE">("IDLE");
+  const [exportProgress, setExportProgress] = useState<CompositionExportProgress | null>(null);
+  const [exportErrorMessage, setExportErrorMessage] = useState("");
+  const [exportErrorCode, setExportErrorCode] = useState<CompositionExportErrorCode | null>(null);
+  const [exportErrorSlotIds, setExportErrorSlotIds] = useState<string[]>([]);
+  const exportController = useRef<AbortController | null>(null);
+  const exportOperationId = useRef(0);
+  const renderer = useRef<CompositionExportRenderer>(
+    compositionExportRenderer ?? createCanvasCompositionExportRenderer(),
+  );
   const firstDialogControl = useRef<HTMLButtonElement>(null);
   const restoreFocus = useRef<HTMLElement | null>(null);
   const slotButtons = useRef(new Map<string, HTMLButtonElement>());
@@ -104,6 +130,8 @@ export function CompositionEditor({
       }
       setDraft(stored);
       setTemplate(definition);
+      setJpegQuality(definition.export.jpegQuality);
+      setExportFormat(definition.export.formats[0] ?? "image/png");
       setLoadState("ready");
       setAnnouncement("Rascunho local carregado neste navegador.");
 
@@ -185,6 +213,11 @@ export function CompositionEditor({
     return () => window.removeEventListener("beforeunload", beforeUnload);
   }, [hasUnsavedChanges]);
 
+  useEffect(() => () => {
+    exportOperationId.current += 1;
+    exportController.current?.abort();
+  }, []);
+
   async function loadPhotosForChooser() {
     setPhotoLoadState("loading");
     setPhotoError(false);
@@ -224,6 +257,9 @@ export function CompositionEditor({
       updatedAt: new Date().toISOString(),
     };
     setDraft(nextDraft);
+    setExportErrorMessage("");
+    setExportErrorCode(null);
+    setExportErrorSlotIds([]);
     setPreviewsByAssetId((current) => new Map(current).set(photo.id, photo.previewUrl));
     setUnavailableSlotIds((current) => current.filter((slotId) => slotId !== activeSlotId));
     setHasUnsavedChanges(true);
@@ -310,6 +346,11 @@ export function CompositionEditor({
       setUnavailableSlotIds(refreshed.unavailableSlotIds);
       setExpiredAssetIds(new Set());
       setPhotoLoadState("ready");
+      if (exportErrorCode === "PHOTO_PREVIEW_EXPIRED") {
+        setExportErrorMessage("");
+        setExportErrorCode(null);
+        setExportErrorSlotIds([]);
+      }
       setAnnouncement("Prévia das fotografias atualizada.");
     } catch {
       setRefreshError(true);
@@ -349,6 +390,141 @@ export function CompositionEditor({
       setIsChooserOpen(false);
       setActiveSlotId(null);
     }
+  }
+
+  const filledSlotCount = draft?.document.slots.filter((slot) => slot.assetId).length ?? 0;
+  const allSlotsFilled = !!draft && filledSlotCount === draft.document.slots.length;
+  const exportIsBusy = ["PREPARING", "LOADING_PHOTOS", "RENDERING", "ENCODING", "DOWNLOADING"]
+    .includes(exportPhase);
+  const exportHasUnavailablePhoto = !!draft && draft.document.slots.some(
+    (slot) => slot.assetId && unavailableSlotIds.includes(slot.slotId),
+  );
+
+  function exportErrorMessageFor(error: unknown): string {
+    if (!(error instanceof CompositionExportError)) {
+      return "Não foi possível exportar esta composição. Tente novamente.";
+    }
+    const affectedSlots = error.slotIds.map((slotId) =>
+      draft?.document.slots.findIndex((slot) => slot.slotId === slotId) ?? -1,
+    ).filter((index) => index >= 0).map((index) => index + 1);
+    const slotLabel = affectedSlots.length
+      ? `${affectedSlots.length > 1 ? " nos espaços" : " no espaço"} ${affectedSlots.join(", ")}`
+      : "";
+    const photoLabel = `${affectedSlots.length > 1 ? "As fotografias" : "A fotografia"}${slotLabel}`;
+    switch (error.code) {
+      case "INCOMPLETE_COMPOSITION": return "Preencha todos os espaços para exportar.";
+      case "PHOTO_PREVIEW_EXPIRED":
+        return affectedSlots.length > 1
+          ? `Os links temporários das fotografias${slotLabel} expiraram. Atualize as fotografias e tente novamente.`
+          : `O link temporário da fotografia${slotLabel} expirou. Atualize as fotografias e tente novamente.`;
+      case "PHOTO_UNAVAILABLE":
+        return `${photoLabel} ${affectedSlots.length > 1 ? "não estão" : "não está"} mais disponível${affectedSlots.length > 1 ? "s" : ""}. Escolha outra e tente novamente.`;
+      case "PHOTO_DECODE_FAILED":
+        return `${photoLabel} ${affectedSlots.length > 1 ? "não puderam" : "não pôde"} ser lida${affectedSlots.length > 1 ? "s" : ""}. Substitua e tente novamente.`;
+      case "INSUFFICIENT_SOURCE_RESOLUTION": {
+        return `${photoLabel} ${affectedSlots.length > 1 ? "precisam" : "precisa"} ter resolução maior para este template.`;
+      }
+      case "UNSUPPORTED_FORMAT": return "Este template não permite o formato escolhido.";
+      case "INVALID_QUALITY": return "A qualidade JPEG escolhida não é válida.";
+      case "UNSUPPORTED_TEMPLATE_DIMENSIONS": return "A resolução deste template excede o limite disponível.";
+      case "CANVAS_CORS": return "Não foi possível exportar a fotografia privada. Verifique a conexão e tente novamente.";
+      case "CANCELLED": return "Exportação cancelada.";
+      default: return "Não foi possível exportar esta composição. Tente novamente.";
+    }
+  }
+
+  function downloadExport(result: Awaited<ReturnType<typeof exportComposition>>) {
+    const objectUrl = URL.createObjectURL(result.blob);
+    const link = document.createElement("a");
+    try {
+      link.href = objectUrl;
+      link.download = result.fileName;
+      link.hidden = true;
+      document.body.append(link);
+      link.click();
+    } finally {
+      link.remove();
+      window.setTimeout(() => URL.revokeObjectURL(objectUrl), 1000);
+    }
+  }
+
+  async function startExport() {
+    if (!draft || !template || !allSlotsFilled || exportIsBusy) return;
+    const operationId = ++exportOperationId.current;
+    const controller = new AbortController();
+    exportController.current = controller;
+    setExportErrorMessage("");
+    setExportErrorCode(null);
+    setExportErrorSlotIds([]);
+    setExportProgress({ phase: "PREPARING" });
+    setExportPhase("PREPARING");
+    setAnnouncement("Preparando a composição para exportar.");
+
+    try {
+      const options: CompositionExportOptions = exportFormat === "image/jpeg"
+        ? { format: exportFormat, jpegQuality }
+        : { format: exportFormat };
+      const result = await exportComposition(
+        draft,
+        options,
+        {
+          photoGateway,
+          renderer: renderer.current,
+        },
+        controller.signal,
+        (progress) => {
+          if (controller.signal.aborted || exportOperationId.current !== operationId) return;
+          setExportProgress(progress);
+          setExportPhase(progress.phase);
+          if (progress.phase === "LOADING_PHOTOS") {
+            setAnnouncement(progress.totalPhotos
+              ? `Carregando fotografias ${progress.completedPhotos ?? 0} de ${progress.totalPhotos}.`
+              : "Carregando fotografias para exportar.");
+          } else if (progress.phase === "RENDERING") {
+            setAnnouncement("Montando a composição para exportar.");
+          } else if (progress.phase === "ENCODING") {
+            setAnnouncement("Gerando o arquivo de imagem.");
+          }
+        },
+      );
+      if (controller.signal.aborted || exportOperationId.current !== operationId) {
+        throw new CompositionExportError("CANCELLED", "Exportação cancelada.");
+      }
+      setExportPhase("DOWNLOADING");
+      setExportProgress({ phase: "DOWNLOADING" });
+      setAnnouncement("Preparando o download da imagem.");
+      downloadExport(result);
+      setExportPhase("COMPLETE");
+      setExportProgress({ phase: "COMPLETE" });
+      setAnnouncement("Exportação concluída. A imagem foi baixada neste dispositivo.");
+    } catch (error) {
+      if (exportOperationId.current !== operationId) return;
+      if (controller.signal.aborted || (error instanceof CompositionExportError && error.code === "CANCELLED")) {
+        setExportPhase("CANCELLED");
+        setExportProgress({ phase: "CANCELLED" });
+        setAnnouncement("Exportação cancelada.");
+      } else {
+        setExportPhase("ERROR");
+        setExportProgress({ phase: "ERROR" });
+        const message = exportErrorMessageFor(error);
+        setExportErrorMessage(message);
+        setExportErrorCode(error instanceof CompositionExportError ? error.code : null);
+        setExportErrorSlotIds(error instanceof CompositionExportError ? [...error.slotIds] : []);
+        setAnnouncement(message);
+      }
+    } finally {
+      if (exportController.current === controller) exportController.current = null;
+    }
+  }
+
+  function cancelExport() {
+    exportOperationId.current += 1;
+    exportController.current?.abort();
+    exportController.current = null;
+    setExportPhase("CANCELLED");
+    setExportProgress({ phase: "CANCELLED" });
+    setExportErrorMessage("");
+    setAnnouncement("Exportação cancelada.");
   }
 
   if (loadState === "loading") {
@@ -544,10 +720,10 @@ export function CompositionEditor({
 
           <aside className="composition-side-panel" aria-label="Estado do rascunho">
             <h2>Seu arranjo</h2>
-            <p>{draft.document.slots.filter((slot) => slot.assetId).length} de {draft.document.slots.length} espaços preenchidos</p>
+            <p>{filledSlotCount} de {draft.document.slots.length} espaços preenchidos</p>
             <p className="composition-private-copy">
               As fotografias continuam privadas na sua biblioteca. Este arranjo
-              fica neste navegador e ainda não pode ser exportado ou publicado.
+              fica neste navegador; a publicação ainda não está disponível.
             </p>
             <p className="composition-save-state" role="status" aria-live="polite" aria-atomic="true">
               {isSaving
@@ -569,6 +745,88 @@ export function CompositionEditor({
                 </button>
               </div>
             )}
+            <div className="composition-export-controls" aria-label="Exportar composição">
+              <h3>Guardar como imagem</h3>
+              <label htmlFor="composition-export-format">Formato da imagem</label>
+              <select
+                id="composition-export-format"
+                value={exportFormat}
+                onChange={(event) => setExportFormat(event.target.value as CompositionExportOptions["format"])}
+                disabled={exportIsBusy}
+              >
+                {template.export.formats.includes("image/png") && <option value="image/png">PNG</option>}
+                {template.export.formats.includes("image/jpeg") && <option value="image/jpeg">JPEG</option>}
+              </select>
+              {exportFormat === "image/jpeg" && (
+                <div className="composition-export-quality">
+                  <label htmlFor="composition-export-quality">
+                    Qualidade do JPEG <span>{Math.round(jpegQuality * 100)}%</span>
+                  </label>
+                  <input
+                    id="composition-export-quality"
+                    type="range"
+                    min="0"
+                    max="1"
+                    step="0.01"
+                    value={jpegQuality}
+                    onChange={(event) => setJpegQuality(Number(event.target.value))}
+                    disabled={exportIsBusy}
+                  />
+                </div>
+              )}
+              {!allSlotsFilled && <p className="composition-export-help">Preencha todos os espaços para exportar.</p>}
+              {exportHasUnavailablePhoto && (
+                <p className="composition-export-help">Atualize ou substitua as fotografias indisponíveis antes de exportar.</p>
+              )}
+              {exportPhase === "LOADING_PHOTOS" && exportProgress?.totalPhotos !== undefined && (
+                <progress
+                  className="composition-export-progress"
+                  max={exportProgress.totalPhotos}
+                  value={exportProgress.completedPhotos ?? 0}
+                  aria-label="Progresso ao carregar fotografias"
+                />
+              )}
+              {exportIsBusy ? (
+                <button className="button button-secondary" type="button" onClick={cancelExport}>
+                  Cancelar exportação
+                </button>
+              ) : (
+                <button
+                  className="button button-primary"
+                  type="button"
+                  onClick={() => void startExport()}
+                  disabled={!allSlotsFilled || exportHasUnavailablePhoto || photoLoadState === "error" || isSaving}
+                >
+                  Exportar composição
+                </button>
+              )}
+              {exportErrorMessage && (
+                <div className="composition-inline-alert" role="alert">
+                  <p>{exportErrorMessage}</p>
+                  {exportErrorCode === "PHOTO_PREVIEW_EXPIRED" && (
+                    <button className="button button-secondary" type="button" onClick={() => void updateExpiredPreviews()}>
+                      Atualizar fotografias
+                    </button>
+                  )}
+                  {exportErrorSlotIds[0] && (() => {
+                    const slotId = exportErrorSlotIds[0]!;
+                    const slotIndex = draft.document.slots.findIndex((slot) => slot.slotId === slotId) + 1;
+                    const action = exportErrorCode === "INSUFFICIENT_SOURCE_RESOLUTION"
+                      ? "Escolher foto com maior resolução"
+                      : "Substituir fotografia";
+                    return (
+                      <button
+                        className="button button-secondary"
+                        type="button"
+                        onClick={(event) => openChooser(slotId, event.currentTarget)}
+                      >
+                        {action} no espaço {slotIndex}
+                      </button>
+                    );
+                  })()}
+                </div>
+              )}
+            </div>
           </aside>
         </section>
       </main>

@@ -1539,6 +1539,68 @@ input:focus-visible + label,
   font-weight: 500;
 }
 
+.composition-export-controls {
+  display: grid;
+  gap: 10px;
+  margin-top: 20px;
+  padding-top: 18px;
+  border-top: 1px solid var(--memora-border);
+}
+
+.composition-export-controls h3 {
+  margin: 0 0 2px;
+  color: var(--memora-ink);
+  font-family: var(--font-editorial);
+  font-size: 22px;
+  font-weight: 500;
+}
+
+.composition-export-controls label {
+  color: var(--memora-ink);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.composition-export-controls select {
+  min-height: 48px;
+  width: 100%;
+  padding: 0 12px;
+  border: 1px solid var(--memora-border);
+  border-radius: 10px;
+  background: var(--memora-white);
+  color: var(--memora-ink);
+}
+
+.composition-export-quality {
+  display: grid;
+  gap: 4px;
+}
+
+.composition-export-quality label {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.composition-export-quality input {
+  min-height: 44px;
+  width: 100%;
+  accent-color: var(--memora-petrol);
+}
+
+.composition-export-help {
+  margin: 0;
+  color: var(--memora-muted);
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.composition-export-progress {
+  width: 100%;
+  height: 10px;
+  accent-color: var(--memora-petrol);
+}
+
 .composition-side-panel > p:not(.composition-private-copy, .composition-save-state) {
   margin: 12px 0;
   color: var(--memora-muted);

@@ -1,12 +1,16 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
+import type { Mock } from "vitest";
 import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { CompositionEditor } from "./composition-editor";
+import type { CompositionExportRenderer } from "../../application/compositions/composition-export-renderer";
+import type { LocalCompositionDraft } from "../../domain/compositions/composition-document";
+import { CompositionExportError } from "../../domain/compositions/composition-export";
 
 const DRAFT_ID = "82f44972-00f0-4b5c-8711-b9ba6d331df3";
 const timestamp = "2026-10-24T15:30:00.000Z";
 
-function makeDraft(templateId = "duo-side-by-side") {
+function makeDraft(templateId = "duo-side-by-side"): LocalCompositionDraft {
   const slotIds = templateId === "single-photo" ? ["photo-1"] : ["photo-1", "photo-2"];
   return {
     id: DRAFT_ID,
@@ -25,7 +29,7 @@ function makeDraft(templateId = "duo-side-by-side") {
       textLayers: [],
       backgroundColor: "#F8F5EE",
     },
-  };
+  } as LocalCompositionDraft;
 }
 
 function readyPhoto(id: string, previewUrl: string) {
@@ -35,7 +39,7 @@ function readyPhoto(id: string, previewUrl: string) {
     contentType: "image/jpeg" as const,
     sizeBytes: 100,
     previewUrl,
-    previewExpiresAt: "2026-10-24T16:30:00.000Z",
+    previewExpiresAt: "2099-10-24T16:30:00.000Z",
   };
 }
 
@@ -45,8 +49,15 @@ function renderEditor({
     readyPhoto("asset-a", "https://signed.invalid/preview-a"),
     readyPhoto("asset-b", "https://signed.invalid/preview-b"),
   ]],
-  save = vi.fn(async (draft) => draft),
+  exportRenderer,
+  save = vi.fn(async (draft: LocalCompositionDraft) => draft),
   navigate = vi.fn(),
+}: {
+  stored?: ReturnType<typeof makeDraft>;
+  photoPages?: Array<ReturnType<typeof readyPhoto>[]>;
+  exportRenderer?: CompositionExportRenderer;
+  save?: Mock<(draft: LocalCompositionDraft) => Promise<LocalCompositionDraft>>;
+  navigate?: Mock<(href: string) => void>;
 } = {}) {
   const store = {
     get: vi.fn().mockResolvedValue(stored),
@@ -61,6 +72,7 @@ function renderEditor({
       draftId={DRAFT_ID}
       draftStore={store}
       photoGateway={photos}
+      compositionExportRenderer={exportRenderer}
       onNavigate={navigate}
     />,
   );
@@ -262,5 +274,142 @@ describe("local composition editor (MEM-005-AC02..16)", () => {
     expect(screen.queryByRole("img", { name: /fotografia no espaço/i })).not.toBeInTheDocument();
     expect(store.save).not.toHaveBeenCalled();
     expect(stored.document.slots[0].transform.scale).toBe(2);
+  });
+});
+
+describe("composition export controls (MEM-007-AC03, AC11, AC13, AC15)", () => {
+  it("keeps export disabled until every photo slot is ready", async () => {
+    renderEditor({ stored: makeDraft("single-photo") });
+
+    const exportButton = await screen.findByRole("button", { name: /exportar composição/i });
+    expect(exportButton).toBeDisabled();
+    expect(screen.getByText(/preencha todos os espaços/i)).toBeInTheDocument();
+  });
+
+  it("exports locally, downloads the selected format, and leaves the local draft unchanged", async () => {
+    const user = userEvent.setup();
+    const stored = makeDraft("single-photo");
+    stored.document.slots[0]!.assetId = "asset-a";
+    const renderer: CompositionExportRenderer = {
+      render: vi.fn().mockResolvedValue({
+        blob: new Blob(["local-image"], { type: "image/png" }),
+        mimeType: "image/png",
+        width: 1600,
+        height: 1600,
+        fileName: "memora-single-photo.png",
+      }),
+    };
+    const original = JSON.stringify(stored);
+    const { photos, store } = renderEditor({
+      stored,
+      photoPages: [
+        [readyPhoto("asset-a", "https://signed.invalid/preview-a")],
+        [readyPhoto("asset-a", "https://signed.invalid/preview-current")],
+      ],
+      exportRenderer: renderer,
+    });
+    vi.stubGlobal("URL", {
+      createObjectURL: vi.fn(() => "blob:memora-export"),
+      revokeObjectURL: vi.fn(),
+    });
+    const click = vi.spyOn(HTMLAnchorElement.prototype, "click").mockImplementation(() => {});
+
+    await user.selectOptions(await screen.findByLabelText(/formato da imagem/i), "image/png");
+    await user.click(screen.getByRole("button", { name: /exportar composição/i }));
+
+    await waitFor(() => expect(renderer.render).toHaveBeenCalledOnce());
+    expect(photos.listPhotos).toHaveBeenCalledTimes(2);
+    expect(click).toHaveBeenCalledOnce();
+    expect(screen.getByRole("status")).toHaveTextContent(/exportação concluída/i);
+    expect(JSON.stringify(stored)).toBe(original);
+    expect(store.save).not.toHaveBeenCalled();
+  });
+
+  it("aborts the render and never starts a download after cancellation", async () => {
+    const user = userEvent.setup();
+    const stored = makeDraft("single-photo");
+    stored.document.slots[0]!.assetId = "asset-a";
+    let renderSignal: AbortSignal | undefined;
+    const renderer: CompositionExportRenderer = {
+      render: vi.fn(({ signal }: { signal: AbortSignal }) => {
+        renderSignal = signal;
+        return new Promise<never>(() => {});
+      }),
+    };
+    const { store } = renderEditor({
+      stored,
+      photoPages: [
+        [readyPhoto("asset-a", "https://signed.invalid/preview-a")],
+        [readyPhoto("asset-a", "https://signed.invalid/preview-current")],
+      ],
+      exportRenderer: renderer,
+    });
+    const click = vi.spyOn(HTMLAnchorElement.prototype, "click").mockImplementation(() => {});
+
+    await user.click(await screen.findByRole("button", { name: /exportar composição/i }));
+    const cancel = await screen.findByRole("button", { name: /cancelar exportação/i });
+    await user.click(cancel);
+
+    expect(renderSignal?.aborted).toBe(true);
+    expect(await screen.findByRole("status")).toHaveTextContent(/exportação cancelada/i);
+    expect(click).not.toHaveBeenCalled();
+    expect(store.save).not.toHaveBeenCalled();
+  });
+
+  it("shows a recoverable error and retains the export action when Canvas fails", async () => {
+    const user = userEvent.setup();
+    const stored = makeDraft("single-photo");
+    stored.document.slots[0]!.assetId = "asset-a";
+    const renderer: CompositionExportRenderer = {
+      render: vi.fn().mockRejectedValue(Object.assign(new Error("tainted"), { code: "CANVAS_CORS" })),
+    };
+    renderEditor({
+      stored,
+      photoPages: [
+        [readyPhoto("asset-a", "https://signed.invalid/preview-a")],
+        [readyPhoto("asset-a", "https://signed.invalid/preview-current")],
+      ],
+      exportRenderer: renderer,
+    });
+
+    await user.click(await screen.findByRole("button", { name: /exportar composição/i }));
+
+    expect(await screen.findByRole("alert")).toHaveTextContent(/não foi possível exportar/i);
+    expect(screen.getByRole("button", { name: /exportar composição/i })).toBeEnabled();
+  });
+
+  it("identifies low-resolution slots and opens the photo chooser for a higher-resolution replacement", async () => {
+    const user = userEvent.setup();
+    const stored = makeDraft("single-photo");
+    stored.document.slots[0]!.assetId = "asset-a";
+    const renderer: CompositionExportRenderer = {
+      render: vi.fn().mockRejectedValue(new CompositionExportError(
+        "INSUFFICIENT_SOURCE_RESOLUTION",
+        "Fonte pequena.",
+        { slotIds: ["photo-1"], assetIds: ["asset-a"] },
+      )),
+    };
+    renderEditor({
+      stored,
+      photoPages: [
+        [readyPhoto("asset-a", "https://signed.invalid/preview-a")],
+        [readyPhoto("asset-a", "https://signed.invalid/current-a")],
+        [readyPhoto("asset-b", "https://signed.invalid/larger-b")],
+      ],
+      exportRenderer: renderer,
+    });
+
+    await user.click(await screen.findByRole("button", { name: /exportar composição/i }));
+
+    const alert = await screen.findByRole("alert");
+    expect(alert).toHaveTextContent(/fotografia no espaço 1 precisa ter resolução maior/i);
+    await user.click(within(alert).getByRole("button", {
+      name: /escolher foto com maior resolução no espaço 1/i,
+    }));
+    expect(await screen.findByRole("dialog", { name: /escolher fotografia/i })).toBeInTheDocument();
+    expect(screen.getByRole("img", { name: /prévia da fotografia 1/i })).toHaveAttribute(
+      "src",
+      "https://signed.invalid/larger-b",
+    );
   });
 });
