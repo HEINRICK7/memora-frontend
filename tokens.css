@@ -1,0 +1,46 @@
+:root {
+  --memora-petrol: #243d3a;
+  --memora-terracotta: #c77760;
+  --memora-sage: #819988;
+  --memora-honey: #c39452;
+  --memora-linen: #f8f5ee;
+  --memora-white: #ffffff;
+  --memora-ink: #243d3a;
+  --memora-muted: #536b65;
+  --memora-border: #e4ded3;
+
+  --background: var(--memora-linen);
+  --foreground: var(--memora-ink);
+  --surface: var(--memora-white);
+  --primary: var(--memora-petrol);
+  --primary-foreground: var(--memora-white);
+  --accent: var(--memora-terracotta);
+  --border: var(--memora-border);
+
+  --font-brand: "Engagement", cursive;
+  --font-body: "DM Sans", system-ui, sans-serif;
+  --font-editorial: "Cormorant Garamond", Georgia, serif;
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 20px;
+  --space-unit: 4px;
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-body);
+}
+
+.memora-primary-button {
+  min-height: 44px;
+  background: var(--primary);
+  color: var(--primary-foreground);
+  border-radius: var(--radius-md);
+}
+
+.memora-primary-button:focus-visible {
+  outline: 3px solid var(--memora-honey);
+  outline-offset: 3px;
+}
+
