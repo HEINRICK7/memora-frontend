@@ -27,7 +27,7 @@ export function BrandHeader({ activePage }: BrandHeaderProps) {
           Templates
         </a>
       </nav>
-      <span className="masthead-note">Um lugar para guardar histórias</span>
+      <span className="masthead-note">murais para compartilhar</span>
     </header>
   );
 }

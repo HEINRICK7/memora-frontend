@@ -1,6 +1,6 @@
 # Instruções para agentes — Memora
 
-Leia `BRAND_SYSTEM.md`, `FRONTEND_SPEC.md`, `../memora-backend/BACKEND_SPEC.md` e `SDD_TDD_PROTOCOL.md` por completo antes de iniciar qualquer feature. A verdade de branding e produto está nesses documentos; não substitua o nome, logo, tipografia ou paleta por interpretações.
+Leia `BRAND_SYSTEM.md`, `MIGRACAO_BRAND_GENZ_V2.md`, `FRONTEND_SPEC.md`, `../memora-backend/BACKEND_SPEC.md` e `SDD_TDD_PROTOCOL.md` por completo antes de iniciar qualquer feature. A direção visual vigente é a v2. Comportamento e segurança continuam nas specs funcionais.
 
 ## Modo de trabalho obrigatório
 
@@ -13,8 +13,8 @@ Leia `BRAND_SYSTEM.md`, `FRONTEND_SPEC.md`, `../memora-backend/BACKEND_SPEC.md` 
 
 ## Restrições
 
-- Não trocar Engagement por fonte manuscrita parecida; usar a fonte oficial.
-- Não tratar o arquivo de imagem gerada como master vetorial da marca.
+- A v2 usa Space Grotesk nos títulos e DM Sans na interface. Não trocar Engagement por outra fonte manuscrita. Os arquivos da v1 ficam como histórico até existir um wordmark vetorial contornado e aprovado.
+- Não tratar imagem gerada como master vetorial da marca. Fotos de `public/brand/v2/` são exemplos sintéticos.
 - Não usar a expressão “Lume”; o nome é Memora.
 - Não usar Ant Design, glassmorphism, gradientes neon e cards genéricos de dashboard.
 - Não misturar conceitos `Mural` e `Composition`: mural recebe contribuições; composição é o arranjo visual exportável.

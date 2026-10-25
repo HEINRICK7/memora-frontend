@@ -1,5 +1,5 @@
-import { PhotoLibrary } from "../presentation/components/photo-library";
+import { LandingPage } from "../presentation/components/landing-page";
 
 export default function HomePage() {
-  return <PhotoLibrary />;
+  return <LandingPage />;
 }

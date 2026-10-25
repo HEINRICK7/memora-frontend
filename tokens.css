@@ -1,25 +1,59 @@
 :root {
-  --memora-petrol: #243d3a;
-  --memora-terracotta: #c77760;
-  --memora-sage: #819988;
-  --memora-honey: #c39452;
-  --memora-linen: #f8f5ee;
-  --memora-white: #ffffff;
-  --memora-ink: #243d3a;
-  --memora-muted: #536b65;
-  --memora-border: #e4ded3;
+  --color-ink: #191d20;
+  --color-paper: #f7f7f2;
+  --color-lime: #d9fd61;
+  --color-cobalt: #475cfa;
+  --color-coral: #ff725e;
+  --color-white: #ffffff;
+  --color-muted: #4e565c;
+  --color-background: var(--color-paper);
+  --color-foreground: var(--color-ink);
+  --color-surface: var(--color-white);
+  --color-border: #e3e3dc;
+  --color-interactive: var(--color-lime);
+  --color-hover: #c8f043;
+  --color-focus: var(--color-cobalt);
+  --color-selected: var(--color-cobalt);
+  --color-disabled-background: #e3e3dc;
+  --color-disabled-foreground: #51585d;
+  --color-success: #176b45;
+  --color-warning: #7a4a00;
+  --color-error: #b42318;
+  --color-success-soft: #e6f4eb;
+  --color-warning-soft: #fff3d6;
+  --color-error-soft: #fee4e2;
 
-  --background: var(--memora-linen);
-  --foreground: var(--memora-ink);
-  --surface: var(--memora-white);
-  --primary: var(--memora-petrol);
-  --primary-foreground: var(--memora-white);
-  --accent: var(--memora-terracotta);
-  --border: var(--memora-border);
+  --brand-ink: var(--color-ink);
+  --brand-paper: var(--color-paper);
+  --brand-lime: var(--color-lime);
+  --brand-cobalt: var(--color-cobalt);
+  --brand-coral: var(--color-coral);
+  --brand-white: var(--color-white);
+  --brand-muted: var(--color-muted);
+  --brand-border: var(--color-border);
 
-  --font-brand: "Engagement", cursive;
+  --memora-petrol: var(--brand-ink);
+  --memora-terracotta: var(--brand-coral);
+  --memora-sage: var(--brand-muted);
+  --memora-honey: var(--brand-cobalt);
+  --memora-linen: var(--brand-paper);
+  --memora-white: var(--brand-white);
+  --memora-ink: var(--brand-ink);
+  --memora-muted: var(--brand-muted);
+  --memora-border: var(--brand-border);
+
+  --background: var(--color-background);
+  --foreground: var(--color-foreground);
+  --surface: var(--color-surface);
+  --primary: var(--color-interactive);
+  --primary-foreground: var(--color-ink);
+  --accent: var(--color-coral);
+  --border: var(--color-border);
+
+  --font-display: "Space Grotesk", system-ui, sans-serif;
+  --font-brand: var(--font-display);
   --font-body: "DM Sans", system-ui, sans-serif;
-  --font-editorial: "Cormorant Garamond", Georgia, serif;
+  --font-editorial: var(--font-display);
   --radius-sm: 8px;
   --radius-md: 12px;
   --radius-lg: 20px;
@@ -34,13 +68,13 @@ body {
 
 .memora-primary-button {
   min-height: 44px;
-  background: var(--primary);
-  color: var(--primary-foreground);
+  background: var(--brand-lime);
+  color: var(--brand-ink);
   border-radius: var(--radius-md);
 }
 
 .memora-primary-button:focus-visible {
-  outline: 3px solid var(--memora-honey);
+  outline: 3px solid var(--brand-cobalt);
   outline-offset: 3px;
 }
 

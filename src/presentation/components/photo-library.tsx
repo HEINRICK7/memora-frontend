@@ -178,8 +178,8 @@ export function PhotoLibrary({
 
       <section className="intro" aria-labelledby="page-title">
         <div className="intro-copy">
-          <p className="eyebrow">Seu espaço de lembranças</p>
-          <h1 id="page-title">Toda foto conta uma história.</h1>
+          <p className="eyebrow">Memora</p>
+          <h1 id="page-title">seu rolê. suas memórias.</h1>
           <p className="intro-signature">
             Suas histórias merecem ser guardadas.
           </p>
@@ -187,12 +187,53 @@ export function PhotoLibrary({
             Escolha fotografias do seu dispositivo e guarde uma cópia privada
             para continuar criando seu mural.
           </p>
+          <a className="button button-primary hero-cta" href="/templates">
+            criar mural
+          </a>
         </div>
-        <div className="intro-note" aria-hidden="true">
-          <span className="note-mark">M</span>
-          <span className="note-rule" />
-          <span className="note-caption">feito de momentos</span>
+        <figure className="hero-photos">
+          <img
+            src="/brand/v2/photos/hero/festival-selfie.webp"
+            alt="Exemplo sintético: amigos em um festival"
+          />
+          <img
+            src="/brand/v2/photos/murals/summer-beach.webp"
+            alt="Exemplo sintético: amigos na praia"
+          />
+          <img
+            src="/brand/v2/photos/murals/birthday-party.webp"
+            alt="Exemplo sintético: aniversário com bolo"
+          />
+        </figure>
+      </section>
+
+      <section className="demo-scenes" aria-labelledby="demo-scenes-title">
+        <div className="section-heading">
+          <div>
+            <p className="eyebrow">Exemplos</p>
+            <h2 id="demo-scenes-title">Cenas sintéticas</h2>
+          </div>
+          <p className="privacy-note">
+            Estas imagens não são fotos suas e não entram na biblioteca privada.
+          </p>
         </div>
+        <ul className="demo-scene-grid">
+          {[
+            ["/brand/v2/photos/murals/friday-party.webp", "Festa entre amigos"],
+            ["/brand/v2/photos/murals/roadtrip-van.webp", "Viagem com van"],
+            ["/brand/v2/photos/murals/skate-action.webp", "Manobra de skate"],
+            ["/brand/v2/photos/birthday/cake.webp", "Bolo de aniversário"],
+            ["/brand/v2/photos/birthday/wish.webp", "Pedido de aniversário"],
+            ["/brand/v2/photos/gallery/beach-campfire.webp", "Fogueira na praia"],
+            ["/brand/v2/photos/gallery/campus-friends.webp", "Amigos no campus"],
+            ["/brand/v2/templates/meu-niver-cover.webp", "Capa de demonstração Meu Niver"],
+          ].map(([src, label]) => (
+            <li key={src}>
+              <img src={src} alt={`Exemplo sintético: ${label}`} />
+              <span>{label}</span>
+            </li>
+          ))}
+        </ul>
       </section>
 
       <section className="import-section" aria-labelledby="import-title">

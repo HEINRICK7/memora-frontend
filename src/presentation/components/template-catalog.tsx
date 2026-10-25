@@ -216,11 +216,11 @@ export function TemplateCatalog({
 
       <main className="template-main">
         <section className="template-intro" aria-labelledby="template-page-title">
-          <p className="eyebrow">Arranjos para suas lembranças</p>
-          <h1 id="template-page-title">Escolha um template</h1>
+          <p className="eyebrow">Templates</p>
+          <h1 id="template-page-title">escolhe o mood</h1>
           <p>
-            Compare os modelos e, quando estiver pronta, inicie um rascunho
-            guardado somente neste navegador.
+            Compare o tipo, a proporção e a quantidade de fotos. O rascunho
+            começa vazio e fica neste navegador.
           </p>
         </section>
 

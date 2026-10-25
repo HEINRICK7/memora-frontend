@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { DM_Sans, Engagement } from "next/font/google";
+import { DM_Sans, Space_Grotesk } from "next/font/google";
 import type { ReactNode } from "react";
 import "./global.css";
 
@@ -9,16 +9,16 @@ const dmSans = DM_Sans({
   display: "swap",
 });
 
-const engagement = Engagement({
-  weight: "400",
+const spaceGrotesk = Space_Grotesk({
   subsets: ["latin"],
-  variable: "--font-engagement",
+  weight: ["600", "700"],
+  variable: "--font-space-grotesk",
   display: "swap",
 });
 
 export const metadata: Metadata = {
-  title: "Memora — Suas histórias merecem ser guardadas",
-  description: "Toda foto conta uma história.",
+  title: "Memora — seu rolê. suas memórias.",
+  description: "Crie um mural com as fotos do seu dispositivo e compartilhe só com quem você escolher.",
   robots: {
     index: false,
     follow: false,
@@ -30,10 +30,8 @@ export default function RootLayout({
   children,
 }: Readonly<{ children: ReactNode }>) {
   return (
-    <html lang="pt-BR">
-      <body className={dmSans.variable + " " + engagement.variable}>
-        {children}
-      </body>
+    <html lang="pt-BR" className={dmSans.variable + " " + spaceGrotesk.variable}>
+      <body>{children}</body>
     </html>
   );
 }

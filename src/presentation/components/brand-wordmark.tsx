@@ -1,24 +1,14 @@
 export function BrandWordmark() {
   return (
-    <span className="brand-wordmark" role="img" aria-label="Memora">
-      <span aria-hidden="true" className="brand-letter brand-letter-petrol">
-        M
-      </span>
-      <span aria-hidden="true" className="brand-letter brand-letter-terracotta">
-        e
-      </span>
-      <span aria-hidden="true" className="brand-letter brand-letter-sage">
-        m
-      </span>
-      <span aria-hidden="true" className="brand-letter brand-letter-honey">
-        o
-      </span>
-      <span aria-hidden="true" className="brand-letter brand-letter-petrol">
-        r
-      </span>
-      <span aria-hidden="true" className="brand-letter brand-letter-terracotta">
-        a
-      </span>
+    <span className="brand-lockup">
+      <svg className="brand-monogram" viewBox="0 0 64 64" aria-hidden="true">
+        <rect width="64" height="64" rx="16" fill="currentColor" />
+        <path
+          fill="#D9FD61"
+          d="M14 48V16h8.2l9.8 16.2L41.8 16H50v32h-7.2V29.2L32 46.2 21.2 29.2V48H14z"
+        />
+      </svg>
+      <span className="brand-wordmark">memora</span>
     </span>
   );
 }

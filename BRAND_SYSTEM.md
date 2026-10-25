@@ -1,7 +1,9 @@
 # MEMORA — Brand & Product System
 
-**Versão:** 1.0 — 24/10/2026  
-**Status:** direção visual aprovada; assets vetoriais e performance requerem validação final.
+**Versão:** 1.0 histórico / 2.0 em aplicação — 24/10/2026
+**Status:** a interface usa a direção Gen Z v2 descrita em `MIGRACAO_BRAND_GENZ_V2.md` e `specs/decisions/ADR-brand-v2.md`. As seções 1–6 abaixo permanecem como histórico da v1. Não apagar esse histórico. Em conflito visual, vale a migração v2. Em conflito de comportamento ou segurança, valem `FRONTEND_SPEC.md` e `BACKEND_SPEC.md`.
+
+O wordmark visível é `memora` em Space Grotesk. O monograma em `public/brand/v2/logo-monogram.svg` é vetor de aplicação, não um contorno tipográfico aprovado como arquivo-mestre. Os SVG da v1 na raiz do frontend continuam no repositório. Fotos de demonstração estão em `public/brand/v2/` e são sintéticas. Mockups de interface ficam em `brand-reference/ui-mockups/` e não entram no site. Fotos de usuários não vão para essa pasta nem essas demonstrações vão para o MinIO.
 
 ## 1. DNA da marca
 
