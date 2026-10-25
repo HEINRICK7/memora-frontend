@@ -1,0 +1,597 @@
+.flow {
+  min-height: 100vh;
+  min-height: 100svh;
+  display: flex;
+  flex-direction: column;
+  padding: 0 max(16px, env(safe-area-inset-left)) calc(18px + env(safe-area-inset-bottom));
+  background: var(--color-paper);
+  color: var(--color-ink);
+}
+
+.header {
+  width: min(100%, 1100px);
+  min-height: 68px;
+  display: grid;
+  grid-template-columns: minmax(76px, 1fr) auto minmax(76px, 1fr);
+  align-items: center;
+  margin: 0 auto;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.headerAction {
+  min-width: 44px;
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
+  color: var(--color-ink);
+  font-size: 14px;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+button.headerAction {
+  justify-content: flex-start;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+}
+
+.headerAction:first-child {
+  justify-self: start;
+  font-size: 30px;
+  line-height: 1;
+}
+
+.headerAction:last-child {
+  justify-self: end;
+}
+
+.brand {
+  display: inline-flex;
+  justify-content: center;
+  color: inherit;
+  text-decoration: none;
+}
+
+.brand :global(.brand-monogram) {
+  width: 26px;
+  height: 26px;
+  border-radius: 7px;
+}
+
+.brand :global(.brand-wordmark) {
+  font-size: 23px;
+}
+
+.fileInput {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+.content,
+.cameraContent {
+  width: min(100%, 720px);
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-self: center;
+  padding: 26px 0 0;
+}
+
+.eyebrow {
+  margin: 0 0 6px;
+  color: var(--color-muted);
+  font-family: var(--font-body);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.07em;
+  line-height: 1.4;
+  text-transform: uppercase;
+}
+
+.title,
+.cameraTitle {
+  max-width: 15ch;
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: clamp(2.45rem, 9vw, 4.25rem);
+  font-weight: 700;
+  letter-spacing: -0.065em;
+  line-height: 0.99;
+}
+
+.title::after {
+  width: 76px;
+  height: 6px;
+  display: block;
+  margin: 9px 0 0 106px;
+  border-radius: 999px;
+  background: var(--color-lime);
+  content: "";
+  transform: rotate(-4deg);
+}
+
+.sourceList {
+  min-width: 0;
+  margin: 24px 0 0;
+  padding: 0;
+  border: 0;
+}
+
+.radioGroup {
+  display: grid;
+  gap: 12px;
+}
+
+.sourceCard {
+  position: relative;
+  min-height: 126px;
+  display: grid;
+  grid-template-columns: 92px minmax(0, 1fr) 28px;
+  align-items: center;
+  gap: 13px;
+  padding: 9px 13px 9px 10px;
+  overflow: hidden;
+  border: 1px solid transparent;
+  border-radius: 17px;
+  background: var(--color-white);
+  cursor: pointer;
+  transition: border-color 140ms ease, background 140ms ease, transform 140ms ease;
+}
+
+.sourceCard:has(input:checked) {
+  background: #eff8cf;
+  border-color: #e6f7ad;
+}
+
+.sourceCard:has(input:focus-visible) {
+  outline: 3px solid var(--color-cobalt);
+  outline-offset: 3px;
+}
+
+.sourceCard:active:not(.sourceDisabled) {
+  transform: scale(0.99);
+}
+
+.sourceCard input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+}
+
+.sourceImage {
+  width: 100px;
+  height: 88px;
+  border-radius: 11px;
+  object-fit: cover;
+  transform: rotate(-3deg);
+}
+
+.sourceCopy {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.sourceTitle {
+  font-family: var(--font-display);
+  font-size: clamp(17px, 5vw, 21px);
+  font-weight: 700;
+  letter-spacing: -0.04em;
+  line-height: 1.05;
+  text-transform: lowercase;
+}
+
+.sourceDescription {
+  max-width: 20ch;
+  color: var(--color-muted);
+  font-size: 13px;
+  line-height: 1.25;
+}
+
+.sourceArrow {
+  justify-self: end;
+  font-family: var(--font-display);
+  font-size: 29px;
+  font-weight: 600;
+  line-height: 1;
+}
+
+.sourceDisabled {
+  color: #777d80;
+  background: #f0f0ed;
+  cursor: not-allowed;
+}
+
+.sourceDisabled .sourceTitle,
+.sourceDisabled .sourceArrow {
+  color: #51585d;
+}
+
+.sourceDisabled .sourceDescription {
+  color: #4e565c;
+}
+
+.googleMark {
+  width: 72px;
+  height: 60px;
+  display: grid;
+  place-items: center;
+  justify-self: center;
+  color: #7a8590;
+  font-size: 39px;
+  line-height: 1;
+}
+
+.primaryAction {
+  width: 100%;
+  min-height: 56px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 12px 20px;
+  border: 0;
+  border-radius: 999px;
+  background: var(--color-lime);
+  color: var(--color-ink);
+  font-family: var(--font-display);
+  font-size: 18px;
+  font-weight: 700;
+  letter-spacing: -0.03em;
+  text-transform: lowercase;
+  cursor: pointer;
+  transition: background 140ms ease, transform 140ms ease;
+}
+
+.primaryAction:hover:not(:disabled) {
+  background: var(--color-hover);
+}
+
+.primaryAction:active:not(:disabled) {
+  transform: scale(0.99);
+}
+
+.primaryAction:disabled,
+.secondaryAction:disabled,
+.addAction:disabled {
+  color: var(--color-disabled-foreground);
+  background: var(--color-disabled-background);
+  cursor: not-allowed;
+}
+
+.helper {
+  margin: 10px 0 0;
+  color: var(--color-muted);
+  font-size: 12px;
+  line-height: 1.45;
+  text-align: center;
+}
+
+.notice {
+  margin: 13px 0 0;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: var(--color-error-soft);
+  color: var(--color-error);
+  font-size: 14px;
+  line-height: 1.45;
+}
+
+.selectionBar {
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 12px;
+  margin: 10px 0 4px;
+}
+
+.selectionBar button,
+.addAction {
+  min-height: 44px;
+  border: 0;
+  background: transparent;
+  color: #2945e9;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.selectedTrayHeader button:disabled {
+  color: var(--color-disabled-foreground);
+  cursor: not-allowed;
+}
+
+.photoGrid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 7px;
+  margin: 0;
+  padding: 0 0 8px;
+  overflow: auto;
+  list-style: none;
+}
+
+.photoTile {
+  position: relative;
+  min-width: 0;
+  aspect-ratio: 1 / 1;
+  overflow: hidden;
+  border-radius: 10px;
+  background: #e4e5df;
+}
+
+.photoTile img {
+  width: 100%;
+  height: 100%;
+  display: block;
+  object-fit: cover;
+}
+
+.removePhoto {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  width: 30px;
+  height: 30px;
+  display: grid;
+  place-items: center;
+  border: 0;
+  border-radius: 50%;
+  background: var(--color-white);
+  color: var(--color-ink);
+  font-size: 22px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.removePhoto:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.savingTag {
+  position: absolute;
+  right: 5px;
+  bottom: 5px;
+  left: 5px;
+  padding: 4px 6px;
+  border-radius: 6px;
+  background: rgb(25 29 32 / 78%);
+  color: white;
+  font-size: 11px;
+  text-align: center;
+}
+
+.emptySelection {
+  min-height: 170px;
+  display: grid;
+  align-content: center;
+  justify-items: center;
+  gap: 7px;
+  padding: 20px;
+  border: 1px dashed var(--color-border);
+  border-radius: 15px;
+  color: var(--color-muted);
+  text-align: center;
+}
+
+.emptySelection p {
+  margin: 0;
+}
+
+.selectedTray {
+  margin-top: auto;
+  padding-top: 8px;
+}
+
+.selectedTrayHeader {
+  min-height: 38px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.selectedTrayHeader p {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.selectedTrayHeader button {
+  min-height: 44px;
+  border: 0;
+  background: transparent;
+  color: #2945e9;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.selectedStrip {
+  display: flex;
+  gap: 4px;
+  margin: 2px 0 0;
+  padding: 0;
+  overflow-x: auto;
+  list-style: none;
+}
+
+.selectedStrip li {
+  min-width: 30px;
+  max-width: 42px;
+  flex: 1 1 0;
+  aspect-ratio: 1 / 1;
+  overflow: hidden;
+  border-radius: 6px;
+  background: #e4e5df;
+}
+
+.selectedStrip img {
+  width: 100%;
+  height: 100%;
+  display: block;
+  object-fit: cover;
+}
+
+.selectionActions {
+  display: grid;
+  margin-top: 0;
+  padding-top: 6px;
+}
+
+.addAction {
+  justify-self: center;
+}
+
+.cameraContent {
+  gap: 12px;
+}
+
+.cameraTitle {
+  font-size: clamp(2.25rem, 8vw, 3.4rem);
+}
+
+.cameraViewport {
+  position: relative;
+  min-height: min(57vh, 510px);
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  border-radius: 20px;
+  background: #161819;
+  color: white;
+}
+
+.cameraViewport video {
+  width: 100%;
+  height: 100%;
+  position: absolute;
+  inset: 0;
+  object-fit: cover;
+}
+
+.cameraViewport p {
+  position: relative;
+  z-index: 1;
+}
+
+.cameraActions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin-top: auto;
+}
+
+.secondaryAction {
+  min-height: 54px;
+  border: 1px solid var(--color-border);
+  border-radius: 999px;
+  background: var(--color-white);
+  color: var(--color-ink);
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.visuallyHidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+}
+
+@media (min-width: 700px) {
+  .flow {
+    padding-right: max(32px, env(safe-area-inset-right));
+    padding-left: max(32px, env(safe-area-inset-left));
+  }
+
+  .header {
+    min-height: 78px;
+  }
+
+  .content,
+  .cameraContent {
+    padding-top: 42px;
+  }
+
+  .radioGroup {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    align-items: stretch;
+  }
+
+  .sourceCard {
+    min-height: 185px;
+    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-rows: 1fr auto;
+    align-content: center;
+    gap: 8px 6px;
+    padding: 13px;
+  }
+
+  .sourceImage,
+  .googleMark {
+    width: 100%;
+    height: 92px;
+    grid-column: 1 / -1;
+    justify-self: stretch;
+    object-fit: cover;
+  }
+
+  .sourceCopy {
+    grid-column: 1;
+  }
+
+  .sourceTitle {
+    font-size: 18px;
+  }
+
+  .sourceDescription {
+    font-size: 12px;
+  }
+
+  .sourceArrow {
+    grid-column: 2;
+    grid-row: 2;
+  }
+
+  .sourceDisabled {
+    align-items: center;
+    align-content: center;
+  }
+
+  .sourceDisabled .googleMark {
+    place-self: center;
+    width: 100%;
+    height: 92px;
+  }
+
+  .primaryAction {
+    min-height: 60px;
+    font-size: 20px;
+  }
+
+  .photoGrid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 10px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sourceCard,
+  .primaryAction {
+    transition: none;
+  }
+}

@@ -25,7 +25,7 @@ export function LandingPage() {
             <a href="/meus-murais">Meus murais</a>
             <a href="/templates">Templates</a>
           </nav>
-          <a className="landing-header-cta" href="/templates">
+          <a className="landing-header-cta" href="/criar">
             criar mural
           </a>
         </header>
@@ -45,7 +45,7 @@ export function LandingPage() {
               </span>
             </p>
             <div className="landing-actions">
-              <a className="landing-primary-action" href="/templates">
+              <a className="landing-primary-action" href="/criar">
                 criar mural
               </a>
               <a className="landing-secondary-action" href="/biblioteca">

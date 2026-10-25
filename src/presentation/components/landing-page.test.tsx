@@ -26,7 +26,7 @@ describe("LandingPage", () => {
 
     const createLinks = page.getAllByRole("link", { name: "criar mural" });
     expect(createLinks.length).toBeGreaterThan(0);
-    createLinks.forEach((link) => expect(link).toHaveAttribute("href", "/templates"));
+    createLinks.forEach((link) => expect(link).toHaveAttribute("href", "/criar"));
     const navigation = page.getByRole("navigation", { name: "Navegação principal" });
     expect(within(navigation).getByRole("link", { name: "Meus murais" })).toHaveAttribute(
       "href",
