@@ -11,6 +11,7 @@ export type MuralSummary = {
   version: number;
   title: string;
   description: string | null;
+  coverPhotoId?: string | null;
   createdAt: string;
   updatedAt: string;
 };

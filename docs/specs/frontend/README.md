@@ -1,6 +1,6 @@
 # Memora frontend — catálogo de telas e SDD
 
-**Estado:** 23 specs revisadas; M01/W01 implementadas e validadas visualmente; as outras 21 telas seguem em andamento.
+**Estado:** 23 specs; M01/W01 implementadas e M02 mobile visual implementada e validada por fixture. A navegação dos cards de M02 e 20 telas permanecem em andamento.
 **Referências oficiais:** boards em `public/telas/`; assets de demonstração em `public/brand/v2/`.
 **Comportamento e segurança:** `FRONTEND_SPEC.md`, `BACKEND_SPEC.md`, `AGENTS.md` e os contratos de cada feature continuam prevalecendo.
 
@@ -28,6 +28,8 @@ O texto do brief anexado e as legendas numeradas das boards discordam sobre a co
 | M16 | Perfil | `image3.png`, quadro 16 |
 
 O editor de texto/stickers, preview de template, publicação, convite e upload descritos no texto são documentados como estados/fluxos dentro das telas visuais correspondentes quando a referência não mostra uma tela separada. Não se atribuem permissões nem endpoints a partir de um mockup.
+
+M02 usa o contrato real de lista e de fotos para murais próprios. Como o ambiente local está sem murais, a comparação dos cards usa uma fixture visual temporária e rotulada, sem persistir imagens demo no MinIO; o estado vazio também foi capturado com a resposta real do backend.
 
 Os nomes dos arquivos M01–M16 mantêm os slugs do brief escrito; o título e o campo **ID visual** dentro de cada arquivo seguem a board. Este crosswalk evita que o slug seja confundido com o conteúdo visual:
 

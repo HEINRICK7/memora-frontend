@@ -15,6 +15,7 @@ const muralSummarySchema = z.object({
     if (value === null) return true;
     return value.trim().length > 0 && countUnicodeCodePoints(value) <= 500;
   }),
+  coverPhotoId: z.string().uuid().nullable().optional(),
   createdAt: z.string().datetime(),
   updatedAt: z.string().datetime(),
 });

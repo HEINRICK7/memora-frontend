@@ -1,12 +1,12 @@
 # Memora frontend — estado de implementação
 
 **Atualizado:** 2026-10-25.
-**Estado geral:** em andamento. M01/W01 foram implementadas, testadas e comparadas em Docker nos viewports 320, 375, 390, 414, 768, 1024 e 1440 px; o restante das telas ainda está pendente de implementação/validação.
+**Estado geral:** em andamento. M01/W01 foram implementadas, testadas e comparadas em Docker nos viewports 320, 375, 390, 414, 768, 1024 e 1440 px. A implementação visual mobile de M02 foi testada e comparada em fixture; falta habilitar navegação dos cards após a rota do proprietário ser versionada. W02 e as outras telas seguem pendentes.
 
 | Tela | Spec | Implementada | Testada | Validada visualmente |
 |---|---|---|---|---|
 | M01 Welcome | Revisada | Implementada | Passou | Sim — 320, 375, 390, 414, 768 |
-| M02 Seus murais | Revisada | Parcial / revisar | Pendente | Não |
+| M02 Seus murais | SDD FE-M02 | Visual mobile implementado; abrir card pendente da rota do proprietário | Passou | Sim — fixture visual 320, 375, 390, 414; estado vazio real 320, 375, 390, 414, 768 |
 | M03 Templates | Revisada | Parcial / revisar | Pendente | Não |
 | M04 Mural público | Revisada | Parcial / revisar | Pendente | Não |
 | M05 Novo mural/origem | Revisada | Pendente / revisar | Pendente | Não |

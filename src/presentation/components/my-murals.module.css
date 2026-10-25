@@ -1,0 +1,339 @@
+.muralCollection :global(.mural-card-cover) {
+  position: relative;
+  width: 88px;
+  height: 88px;
+  flex: 0 0 88px;
+  overflow: hidden;
+  border-radius: 10px;
+  background: var(--brand-border);
+}
+
+.muralCollection :global(.mural-card-cover img) {
+  width: 100%;
+  height: 100%;
+  display: block;
+  object-fit: cover;
+}
+
+.muralCollection :global(.mural-card-cover-empty) {
+  width: 100%;
+  height: 100%;
+  display: grid;
+  place-items: center;
+  padding: 18px;
+  color: var(--brand-muted);
+  font-size: 13px;
+  text-align: center;
+}
+
+.muralCollection :global(.mural-card) {
+  position: relative;
+}
+
+.muralCollection :global(.mural-card-copy) {
+  flex: 1;
+}
+
+.muralCollection :global(.mobile-bottom-navigation) {
+  display: none;
+}
+
+@media (max-width: 760px) {
+  .muralCollection {
+    width: 100%;
+    min-height: 100vh;
+    margin: 0;
+    padding: 0 0 calc(88px + env(safe-area-inset-bottom));
+  }
+
+  .muralCollection :global(.masthead) {
+    min-height: 60px;
+    padding: 0 20px;
+    border-bottom: 0;
+  }
+
+  .muralCollection :global(.brand-monogram),
+  .muralCollection :global(.primary-nav),
+  .muralCollection :global(.masthead-note) {
+    display: none;
+  }
+
+  .muralCollection :global(.brand-lockup) {
+    gap: 0;
+  }
+
+  .muralCollection :global(.brand-wordmark) {
+    color: var(--brand-ink);
+    font-size: 28px;
+  }
+
+  .muralCollection :global(.mural-main) {
+    padding: 18px 20px 0;
+  }
+
+  .muralCollection :global(.mural-intro) {
+    padding-bottom: 20px;
+  }
+
+  .muralCollection :global(.mural-intro > .eyebrow),
+  .muralCollection :global(.mural-intro > p:last-child) {
+    display: none;
+  }
+
+  .muralCollection :global(.mural-intro h1) {
+    max-width: 340px;
+    margin: 0;
+    color: var(--brand-ink);
+    font-family: var(--font-display);
+    font-size: clamp(32px, 8.4vw, 38px);
+    font-weight: 700;
+    letter-spacing: -0.075em;
+    line-height: 0.98;
+  }
+
+  .muralCollection :global(.mural-intro h1 span) {
+    display: block;
+    color: var(--brand-cobalt);
+  }
+
+  .muralCollection :global(.mural-create-panel) {
+    display: none;
+  }
+
+  .muralCollection :global(.mural-list-section) {
+    margin-top: 0;
+    padding: 0;
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+    box-shadow: none;
+  }
+
+  .muralCollection :global(.mural-list-heading) {
+    display: none;
+  }
+
+  .muralCollection :global(.mural-filters) {
+    flex-wrap: nowrap;
+    gap: 7px;
+    margin: 0 -2px 18px;
+    padding: 2px;
+    overflow-x: auto;
+    overscroll-behavior-inline: contain;
+    scrollbar-width: none;
+  }
+
+  .muralCollection :global(.mural-filters::-webkit-scrollbar) {
+    display: none;
+  }
+
+  .muralCollection :global(.mural-filter-button) {
+    min-height: 38px;
+    flex: 0 0 auto;
+    padding: 0 16px;
+    border: 0;
+    background: #e9e9e6;
+    color: #54585a;
+    font-size: 13px;
+    font-weight: 500;
+    text-transform: lowercase;
+    white-space: nowrap;
+  }
+
+  .muralCollection :global(.mural-filter-button[aria-pressed="true"]) {
+    background: var(--brand-ink);
+    color: var(--brand-white);
+  }
+
+  .muralCollection :global(.mural-state) {
+    min-height: 180px;
+    padding: 22px;
+    border: 1px solid var(--brand-border);
+    border-radius: 18px;
+    background: var(--brand-white);
+  }
+
+  .muralCollection :global(.mural-card-list) {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    align-items: start;
+    gap: 12px;
+  }
+
+  .muralCollection :global(.mural-card) {
+    position: relative;
+    aspect-ratio: 0.72;
+    min-height: 210px;
+    display: block;
+    overflow: hidden;
+    padding: 0;
+    border: 0;
+    border-radius: 14px;
+    background: var(--brand-border);
+    box-shadow: none;
+  }
+
+  .muralCollection :global(.mural-card-cover) {
+    position: absolute;
+    inset: 0;
+    width: auto;
+    height: auto;
+    border-radius: inherit;
+  }
+
+  .muralCollection :global(.mural-card::after) {
+    position: absolute;
+    z-index: 1;
+    inset: 38% 0 0;
+    background: linear-gradient(180deg, transparent 0%, rgb(0 0 0 / 78%) 100%);
+    content: "";
+    pointer-events: none;
+  }
+
+  .muralCollection :global(.mural-card-copy) {
+    position: absolute;
+    z-index: 2;
+    right: 12px;
+    bottom: 12px;
+    left: 12px;
+    color: var(--brand-white);
+  }
+
+  .muralCollection :global(.mural-card h3) {
+    overflow: hidden;
+    color: var(--brand-white);
+    font-size: 15px;
+    font-weight: 700;
+    line-height: 1.2;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .muralCollection :global(.mural-card-copy > .mural-card-photo-count) {
+    margin: 3px 0 0;
+    color: var(--brand-white);
+    font-size: 12px;
+    font-weight: 600;
+    line-height: 1.35;
+  }
+
+  .muralCollection :global(.mural-card-date),
+  .muralCollection :global(.mural-card-copy > a) {
+    display: none;
+  }
+
+  .muralCollection :global(.mural-card .mural-status) {
+    position: absolute;
+    z-index: 2;
+    top: 9px;
+    right: 9px;
+    min-height: 28px;
+    padding: 0 9px;
+    border: 0;
+    background: rgb(255 255 255 / 92%);
+    color: var(--brand-ink);
+    font-size: 10px;
+  }
+
+  .muralCollection :global(.mobile-bottom-navigation) {
+    position: fixed;
+    z-index: 20;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr)) 64px repeat(2, minmax(0, 1fr));
+    align-items: center;
+    min-height: 68px;
+    padding: 6px 14px calc(6px + env(safe-area-inset-bottom));
+    border-top: 1px solid rgb(25 29 32 / 8%);
+    background: rgb(255 255 255 / 97%);
+    box-shadow: 0 -5px 20px rgb(25 29 32 / 5%);
+  }
+
+  .muralCollection :global(.mobile-nav-item) {
+    min-width: 44px;
+    min-height: 48px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 3px;
+    padding: 3px;
+    border: 0;
+    background: transparent;
+    color: #747a7e;
+    cursor: pointer;
+    font-size: 10px;
+    font-weight: 500;
+    line-height: 1;
+    text-decoration: none;
+    text-transform: lowercase;
+  }
+
+  .muralCollection :global(.mobile-nav-item svg) {
+    width: 20px;
+    height: 20px;
+    fill: none;
+    stroke: currentColor;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    stroke-width: 1.8;
+  }
+
+  .muralCollection :global(.mobile-nav-item.is-active) {
+    color: var(--brand-ink);
+    font-weight: 700;
+  }
+
+  .muralCollection :global(.mobile-nav-item:disabled) {
+    cursor: not-allowed;
+    opacity: 0.55;
+  }
+
+  .muralCollection :global(.mobile-nav-create) {
+    width: 58px;
+    height: 58px;
+    display: grid;
+    place-items: center;
+    justify-self: center;
+    margin-top: -22px;
+    border-radius: 50%;
+    background: var(--brand-coral);
+    box-shadow: 0 5px 12px rgb(255 114 94 / 28%);
+    color: var(--brand-white);
+    font-family: var(--font-body);
+    font-size: 38px;
+    font-weight: 300;
+    line-height: 1;
+    text-decoration: none;
+  }
+
+  .muralCollection :global(.mobile-nav-create span) {
+    transform: translateY(-2px);
+  }
+
+  .muralCollection :global(.page-footer) {
+    display: none;
+  }
+}
+
+@media (max-width: 380px) {
+  .muralCollection :global(.mural-main) {
+    padding-right: 16px;
+    padding-left: 16px;
+  }
+
+  .muralCollection :global(.mural-card-list) {
+    gap: 9px;
+  }
+
+  .muralCollection :global(.mural-card-copy) {
+    right: 9px;
+    bottom: 10px;
+    left: 9px;
+  }
+
+  .muralCollection :global(.mural-card h3) {
+    font-size: 14px;
+  }
+}

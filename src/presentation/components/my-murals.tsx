@@ -8,7 +8,12 @@ import type {
   MuralStatus,
   MuralSummary,
 } from "../../application/mural-gateway";
+import type {
+  MuralPhotoGateway,
+  MuralPhotoItem,
+} from "../../application/mural-photo-gateway";
 import { muralApiGateway } from "../../infrastructure/mural-api-gateway";
+import { muralPhotoApiGateway } from "../../infrastructure/mural-photo-api-gateway";
 import {
   countUnicodeCodePoints,
   normalizeMuralDraftInput,
@@ -19,6 +24,7 @@ import type {
   NormalizedMuralDraftInput,
 } from "../../domain/murals/mural-draft-input";
 import { BrandHeader } from "./brand-header";
+import styles from "./my-murals.module.css";
 
 const PAGE_SIZE = 20;
 
@@ -26,6 +32,7 @@ type StatusFilter = "ALL" | MuralStatus;
 
 type MyMuralsProps = {
   gateway?: MuralGateway;
+  photoGateway?: MuralPhotoGateway;
 };
 
 type CreationAttempt = {
@@ -134,7 +141,154 @@ function filterPageByStatus(page: MuralPage, status: StatusFilter): MuralPage {
   };
 }
 
-export function MyMurals({ gateway = muralApiGateway }: MyMuralsProps) {
+type MuralPhotoCardProps = {
+  mural: MuralSummary;
+  photoGateway: MuralPhotoGateway | null;
+};
+
+function MuralPhotoCard({ mural, photoGateway }: MuralPhotoCardProps) {
+  const coverTargetRef = useRef<HTMLDivElement | null>(null);
+  const [isNearViewport, setIsNearViewport] = useState(false);
+  const [photos, setPhotos] = useState<MuralPhotoItem[]>([]);
+  const [photoState, setPhotoState] = useState<"loading" | "loaded" | "unavailable">(
+    photoGateway ? "loading" : "unavailable",
+  );
+
+  useEffect(() => {
+    const target = coverTargetRef.current;
+    if (!photoGateway || !target) return;
+
+    if (typeof IntersectionObserver === "undefined") {
+      setIsNearViewport(true);
+      return;
+    }
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries.some((entry) => entry.isIntersecting)) {
+          setIsNearViewport(true);
+          observer.disconnect();
+        }
+      },
+      { rootMargin: "220px" },
+    );
+    observer.observe(target);
+
+    return () => observer.disconnect();
+  }, [mural.id, photoGateway]);
+
+  useEffect(() => {
+    if (!photoGateway) {
+      setPhotos([]);
+      setPhotoState("unavailable");
+      return;
+    }
+    if (!isNearViewport) return;
+
+    let active = true;
+    setPhotos([]);
+    setPhotoState("loading");
+
+    photoGateway
+      .listMuralPhotos(mural.id)
+      .then((page) => {
+        if (!active) return;
+        setPhotos(page.items);
+        setPhotoState("loaded");
+      })
+      .catch(() => {
+        if (active) setPhotoState("unavailable");
+      });
+
+    return () => {
+      active = false;
+    };
+  }, [isNearViewport, mural.id, photoGateway]);
+
+  const cover =
+    photoState === "loaded" && mural.coverPhotoId
+      ? photos.find((photo) => photo.photoId === mural.coverPhotoId)
+      : undefined;
+
+  return (
+    <article className="mural-card">
+      <div className="mural-card-cover" ref={coverTargetRef}>
+        {cover ? (
+          <img
+            src={cover.previewUrl}
+            alt={`Capa de ${mural.title}`}
+            loading="lazy"
+            referrerPolicy="no-referrer"
+          />
+        ) : (
+          <div className="mural-card-cover-empty">
+            <span>Capa indisponível</span>
+          </div>
+        )}
+      </div>
+      <div className="mural-card-copy">
+        <h3>{mural.title}</h3>
+        <p className="mural-card-photo-count" aria-live="polite">
+          {photoState === "loading"
+            ? "Carregando fotos…"
+            : photoState === "unavailable"
+              ? "Fotos indisponíveis"
+              : `${photos.length} ${photos.length === 1 ? "foto" : "fotos"}`}
+        </p>
+        <p className="mural-card-date">
+          Criado em <time dateTime={mural.createdAt}>{formatCreatedAt(mural.createdAt)}</time>
+        </p>
+      </div>
+      <span className={`mural-status mural-status-${mural.status.toLowerCase()}`}>
+        {statusLabel(mural.status)}
+      </span>
+    </article>
+  );
+}
+
+function MobileNavigation() {
+  return (
+    <nav className="mobile-bottom-navigation" aria-label="Navegação móvel">
+      <a className="mobile-nav-item" href="/" aria-label="Início">
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <path d="m3 10 9-7 9 7v10a1 1 0 0 1-1 1h-5v-7H9v7H4a1 1 0 0 1-1-1V10Z" />
+        </svg>
+        <span>Início</span>
+      </a>
+      <a className="mobile-nav-item is-active" href="/meus-murais" aria-current="page">
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <path d="m12 3 9 5-9 5-9-5 9-5Z" />
+          <path d="m3 12 9 5 9-5M3 16l9 5 9-5" />
+        </svg>
+        <span>Murais</span>
+      </a>
+      <a className="mobile-nav-create" href="/templates" aria-label="Criar mural">
+        <span aria-hidden="true">+</span>
+      </a>
+      <a className="mobile-nav-item" href="/templates" aria-label="Modelos">
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <rect x="3" y="3" width="7" height="7" rx="1" />
+          <rect x="14" y="3" width="7" height="7" rx="1" />
+          <rect x="3" y="14" width="7" height="7" rx="1" />
+          <rect x="14" y="14" width="7" height="7" rx="1" />
+        </svg>
+        <span>Modelos</span>
+      </a>
+      <button className="mobile-nav-item" type="button" disabled aria-disabled="true">
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <circle cx="12" cy="8" r="4" />
+          <path d="M4 21a8 8 0 0 1 16 0" />
+        </svg>
+        <span>Perfil</span>
+      </button>
+    </nav>
+  );
+}
+
+export function MyMurals({ gateway: providedGateway, photoGateway: providedPhotoGateway }: MyMuralsProps) {
+  const gateway = providedGateway ?? muralApiGateway;
+  const photoGateway =
+    providedPhotoGateway ?? (providedGateway ? null : muralPhotoApiGateway);
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("ALL");
   const [murals, setMurals] = useState<MuralSummary[]>([]);
   const [nextCursor, setNextCursor] = useState<string | null>(null);
@@ -393,13 +547,15 @@ export function MyMurals({ gateway = muralApiGateway }: MyMuralsProps) {
     : 0;
 
   return (
-    <div className="memora-shell mural-shell">
+    <div className={`memora-shell mural-shell ${styles.muralCollection}`}>
       <BrandHeader activePage="murals" />
 
       <main className="mural-main" aria-busy={isBusy}>
         <section className="mural-intro" aria-labelledby="mural-page-title">
           <p className="eyebrow">Suas lembranças, reunidas</p>
-          <h1 id="mural-page-title">Meus murais</h1>
+          <h1 id="mural-page-title">
+            seus momentos, <span>todos aqui.</span>
+          </h1>
           <p>
             Crie rascunhos para organizar suas histórias. A composição e a
             publicação estarão disponíveis em outra etapa.
@@ -630,6 +786,11 @@ export function MyMurals({ gateway = muralApiGateway }: MyMuralsProps) {
                           Voltar a Todos
                         </button>
                       )}
+                      {statusFilter === "ALL" && (
+                        <a className="button button-primary" href="/templates">
+                          Criar um mural
+                        </a>
+                      )}
                     </div>
                   ) : (
                     <ul
@@ -640,21 +801,7 @@ export function MyMurals({ gateway = muralApiGateway }: MyMuralsProps) {
                     >
                       {murals.map((mural) => (
                         <li key={mural.id}>
-                          <article className="mural-card">
-                            <div className="mural-card-copy">
-                              <h3>{mural.title}</h3>
-                              {mural.description && <p>{mural.description}</p>}
-                              <p className="mural-card-date">
-                                Criado em{" "}
-                                <time dateTime={mural.createdAt}>
-                                  {formatCreatedAt(mural.createdAt)}
-                                </time>
-                              </p>
-                            </div>
-                            <span className={`mural-status mural-status-${mural.status.toLowerCase()}`}>
-                              {statusLabel(mural.status)}
-                            </span>
-                          </article>
+                          <MuralPhotoCard mural={mural} photoGateway={photoGateway} />
                         </li>
                       ))}
                     </ul>
@@ -697,6 +844,7 @@ export function MyMurals({ gateway = muralApiGateway }: MyMuralsProps) {
         <span>Memora</span>
         <span>Suas histórias merecem ser guardadas.</span>
       </footer>
+      <MobileNavigation />
     </div>
   );
 }
