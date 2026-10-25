@@ -1,6 +1,6 @@
 # Memora frontend — catálogo de telas e SDD
 
-**Estado:** 23 specs; M01/W01 implementadas e M02 mobile visual implementada e validada por fixture. A navegação dos cards de M02 e 20 telas permanecem em andamento.
+**Estado:** 23 specs; M01/W01 e M03/W04 implementadas e validadas visualmente em Docker. M02 mobile visual foi validada por fixture, mas a navegação dos cards e as demais telas continuam em andamento.
 **Referências oficiais:** boards em `public/telas/`; assets de demonstração em `public/brand/v2/`.
 **Comportamento e segurança:** `FRONTEND_SPEC.md`, `BACKEND_SPEC.md`, `AGENTS.md` e os contratos de cada feature continuam prevalecendo.
 

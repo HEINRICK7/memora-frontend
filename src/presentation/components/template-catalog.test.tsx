@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { cleanup, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { TEMPLATE_CATALOG_V1 } from "../../domain/templates/template-catalog";
 import { TemplateCatalog } from "./template-catalog";
 
 const ORIGINAL_VIEWPORT_WIDTH = window.innerWidth;
@@ -28,8 +29,8 @@ afterEach(() => {
   setViewportWidth(ORIGINAL_VIEWPORT_WIDTH);
 });
 
-describe("TemplateCatalog (MEM-003-AC01..08)", () => {
-  it("renders the eight photo-free previews with accessible name, orientation, and count", () => {
+describe("TemplateCatalog (FE-M03-AC01..06)", () => {
+  it("renders real registry metadata with local brand photography in each declared slot", () => {
     render(<TemplateCatalog />);
     expect(screen.getByRole("link", { name: "Templates" })).toHaveAttribute(
       "aria-current",
@@ -37,21 +38,62 @@ describe("TemplateCatalog (MEM-003-AC01..08)", () => {
     );
 
     const cards = [
-      /Single.*1 foto.*Quadrado/i,
-      /Duo.*2 fotos.*Paisagem/i,
-      /Trio.*3 fotos.*Paisagem/i,
-      /Classic strip.*4 fotos.*Retrato/i,
-      /Grid.*4 fotos.*Quadrado/i,
-      /Polaroid.*1 foto.*Retrato/i,
-      /Grid 6.*6 fotos.*Paisagem/i,
-      /Story trio.*3 fotos.*Retrato/i,
+      /Single.*1 foto.*Quadrado.*proporção 1:1/i,
+      /Duo.*2 fotos.*Paisagem.*proporção 4:3/i,
+      /Trio.*3 fotos.*Paisagem.*proporção 4:3/i,
+      /Classic strip.*4 fotos.*Retrato.*proporção 2:3/i,
+      /Grid.*4 fotos.*Quadrado.*proporção 1:1/i,
+      /Polaroid.*1 foto.*Retrato.*proporção 4:5/i,
+      /Grid 6.*6 fotos.*Paisagem.*proporção 4:3/i,
+      /Story trio.*3 fotos.*Retrato.*proporção 2:3/i,
     ];
     for (const accessibleName of cards) {
       expect(screen.getByRole("button", { name: accessibleName })).toBeInTheDocument();
     }
 
     expect(screen.queryAllByRole("button", { name: /Selecionado/i })).toHaveLength(0);
-    expect(document.querySelectorAll("img[src]")).toHaveLength(0);
+    const cardElements = Array.from(document.querySelectorAll<HTMLButtonElement>(".template-card"));
+    expect(cardElements).toHaveLength(TEMPLATE_CATALOG_V1.length);
+    for (const [index, card] of cardElements.entries()) {
+      const definition = TEMPLATE_CATALOG_V1[index]!;
+      expect(card).toHaveAttribute("data-template-id", definition.templateId);
+      expect(card).toHaveAttribute("data-template-version", String(definition.version));
+      expect(card.querySelectorAll(".template-preview-slot img")).toHaveLength(
+        definition.slots.length,
+      );
+    }
+
+    const previewImages = Array.from(document.querySelectorAll<HTMLImageElement>(".template-preview-slot img"));
+    const declaredSlotCount = TEMPLATE_CATALOG_V1.reduce(
+      (sum, definition) => sum + definition.slots.length,
+      0,
+    );
+    expect(previewImages).toHaveLength(declaredSlotCount);
+    expect(previewImages.every((image) => image.getAttribute("src")?.startsWith("/brand/v2/photos/"))).toBe(true);
+    expect(previewImages.every((image) => image.getAttribute("alt") === "")).toBe(true);
+  });
+
+  it("filters the real local registry by name, description, and template ID", async () => {
+    const user = userEvent.setup();
+    render(<TemplateCatalog />);
+
+    await user.click(screen.getByRole("button", { name: /buscar templates/i }));
+    const search = screen.getByRole("searchbox", { name: /buscar templates/i });
+    await user.type(search, "duo-side-by-side");
+
+    expect(screen.getAllByRole("button", { name: /Duo.*2 fotos/i })).toHaveLength(1);
+    expect(screen.queryByRole("button", { name: /Single.*1 foto/i })).not.toBeInTheDocument();
+
+    await user.clear(search);
+    await user.type(search, "Um momento em destaque");
+    expect(screen.getByRole("button", { name: /Trio.*3 fotos/i })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /Duo.*2 fotos/i })).not.toBeInTheDocument();
+
+    await user.clear(search);
+    await user.type(search, "not-a-template");
+    expect(await screen.findByText(/nenhum template/i)).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: /limpar filtros/i }));
+    expect(document.querySelectorAll(".template-card")).toHaveLength(TEMPLATE_CATALOG_V1.length);
   });
 
   it("does not call fetch when mounted, filtered, or selected", async () => {

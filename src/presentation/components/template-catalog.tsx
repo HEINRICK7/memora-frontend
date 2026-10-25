@@ -34,14 +34,89 @@ const ASPECT_RATIOS: Array<NonNullable<TemplateCatalogFilter["aspectRatio"]>> = 
   "4:5",
 ];
 
+const RATIO_LABELS: ReadonlyArray<{
+  label: NonNullable<TemplateCatalogFilter["aspectRatio"]>;
+  ratio: number;
+}> = [
+  { label: "1:1", ratio: 1 },
+  { label: "4:3", ratio: 4 / 3 },
+  { label: "2:3", ratio: 2 / 3 },
+  { label: "4:5", ratio: 4 / 5 },
+];
+
 const ORIENTATION_LABELS: Record<TemplateOrientation, string> = {
   portrait: "Retrato",
   square: "Quadrado",
   landscape: "Paisagem",
 };
 
+const TEMPLATE_PREVIEW_IMAGES: Readonly<Record<string, readonly string[]>> = {
+  "single-photo": ["/brand/v2/photos/hero/festival-selfie.webp"],
+  "duo-side-by-side": [
+    "/brand/v2/photos/murals/summer-beach.webp",
+    "/brand/v2/photos/gallery/coastal-roadtrip.webp",
+  ],
+  "trio-featured": [
+    "/brand/v2/photos/murals/friday-party.webp",
+    "/brand/v2/photos/gallery/festival-lights.webp",
+    "/brand/v2/photos/gallery/campus-friends.webp",
+  ],
+  "classic-strip": [
+    "/brand/v2/photos/murals/skate-action.webp",
+    "/brand/v2/photos/murals/roadtrip-van.webp",
+    "/brand/v2/photos/gallery/sunset-viewpoint.webp",
+    "/brand/v2/photos/gallery/golden-beach.webp",
+  ],
+  "grid-four": [
+    "/brand/v2/photos/birthday/selfie.webp",
+    "/brand/v2/photos/birthday/cake.webp",
+    "/brand/v2/photos/birthday/wish.webp",
+    "/brand/v2/photos/birthday/friends.webp",
+  ],
+  "polaroid-single": ["/brand/v2/photos/murals/birthday-party.webp"],
+  "grid-six": [
+    "/brand/v2/photos/gallery/beach-campfire.webp",
+    "/brand/v2/photos/gallery/campus-friends.webp",
+    "/brand/v2/photos/gallery/concert-friends.webp",
+    "/brand/v2/photos/gallery/festival-lights.webp",
+    "/brand/v2/photos/gallery/golden-beach.webp",
+    "/brand/v2/photos/gallery/sunset-viewpoint.webp",
+  ],
+  "story-trio": [
+    "/brand/v2/photos/murals/friday-party.webp",
+    "/brand/v2/photos/gallery/sunset-viewpoint.webp",
+    "/brand/v2/photos/gallery/concert-friends.webp",
+  ],
+};
+
+function matchesSearch(definition: TemplateDefinition, searchQuery: string): boolean {
+  const normalizedQuery = searchQuery.trim().toLocaleLowerCase("pt-BR");
+  if (!normalizedQuery) return true;
+  return [definition.name, definition.description, definition.templateId]
+    .join(" ")
+    .toLocaleLowerCase("pt-BR")
+    .includes(normalizedQuery);
+}
+
+function getVisibleTemplates(
+  filters: TemplateCatalogFilter,
+  searchQuery: string,
+): TemplateDefinition[] {
+  return filterTemplateCatalog(TEMPLATE_CATALOG_V1, filters).filter((definition) =>
+    matchesSearch(definition, searchQuery),
+  );
+}
+
 function photoCountLabel(photoCount: number): string {
   return `${photoCount} ${photoCount === 1 ? "foto" : "fotos"}`;
+}
+
+function aspectRatioLabel(aspectRatio: number): string {
+  const match = RATIO_LABELS.find(
+    ({ ratio }) => Math.abs(ratio - aspectRatio) < 0.0001,
+  );
+  if (!match) throw new Error(`Template aspect ratio is not labeled: ${aspectRatio}.`);
+  return match.label;
 }
 
 function createDraftId(): string {
@@ -68,6 +143,10 @@ type TemplatePreviewProps = {
 };
 
 function TemplatePreview({ definition }: TemplatePreviewProps) {
+  const previewImages = TEMPLATE_PREVIEW_IMAGES[definition.templateId];
+  if (!previewImages || previewImages.length !== definition.slots.length) {
+    throw new Error(`Template preview assets do not match ${definition.templateId}.`);
+  }
   const style = {
     "--template-aspect-ratio": definition.aspectRatio,
   } as CSSProperties;
@@ -91,7 +170,7 @@ function TemplatePreview({ definition }: TemplatePreviewProps) {
             }}
           />
         ))}
-        {definition.slots.map((slot) => (
+        {definition.slots.map((slot, index) => (
           <span
             className="template-preview-slot"
             key={slot.slotId}
@@ -102,7 +181,14 @@ function TemplatePreview({ definition }: TemplatePreviewProps) {
               height: `${slot.height * 100}%`,
               zIndex: slot.layerOrder,
             }}
-          />
+          >
+            <img
+              src={previewImages[index]!}
+              alt=""
+              aria-hidden="true"
+              decoding="async"
+            />
+          </span>
         ))}
       </div>
     </div>
@@ -121,6 +207,8 @@ export function TemplateCatalog({
   createId = createDraftId,
 }: TemplateCatalogProps) {
   const [filters, setFilters] = useState<TemplateCatalogFilter>({});
+  const [searchOpen, setSearchOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
   const [selectedTemplateId, setSelectedTemplateId] = useState<string | null>(null);
   const [announcement, setAnnouncement] = useState("");
   const [createError, setCreateError] = useState(false);
@@ -128,8 +216,8 @@ export function TemplateCatalog({
   const [localDrafts, setLocalDrafts] = useState<LocalCompositionDraftListing[]>([]);
   const [draftsState, setDraftsState] = useState<"loading" | "ready" | "error">("loading");
   const visibleTemplates = useMemo(
-    () => filterTemplateCatalog(TEMPLATE_CATALOG_V1, filters),
-    [filters],
+    () => getVisibleTemplates(filters, searchQuery),
+    [filters, searchQuery],
   );
   const selectedTemplate = TEMPLATE_CATALOG_V1.find(
     (definition) => definition.templateId === selectedTemplateId,
@@ -182,7 +270,7 @@ export function TemplateCatalog({
   function applyFilters(nextFilters: TemplateCatalogFilter) {
     if (matchesFilter(filters, nextFilters)) return;
 
-    const nextVisibleTemplates = filterTemplateCatalog(TEMPLATE_CATALOG_V1, nextFilters);
+    const nextVisibleTemplates = getVisibleTemplates(nextFilters, searchQuery);
     const selectedTemplate = TEMPLATE_CATALOG_V1.find(
       (definition) => definition.templateId === selectedTemplateId,
     );
@@ -201,6 +289,23 @@ export function TemplateCatalog({
     setFilters(nextFilters);
   }
 
+  function applySearchQuery(nextSearchQuery: string) {
+    const nextVisibleTemplates = getVisibleTemplates(filters, nextSearchQuery);
+    const selected = TEMPLATE_CATALOG_V1.find(
+      (definition) => definition.templateId === selectedTemplateId,
+    );
+    if (
+      selected &&
+      !nextVisibleTemplates.some((definition) => definition.templateId === selected.templateId)
+    ) {
+      setSelectedTemplateId(null);
+      setAnnouncement(
+        `A seleção de ${selected.name} foi removida porque a busca ocultou esse template.`,
+      );
+    }
+    setSearchQuery(nextSearchQuery);
+  }
+
   function selectTemplate(definition: TemplateDefinition) {
     if (selectedTemplateId === definition.templateId) return;
 
@@ -210,27 +315,83 @@ export function TemplateCatalog({
     );
   }
 
+  function clearAllFilters() {
+    setSelectedTemplateId(null);
+    setFilters({});
+    setSearchQuery("");
+    setAnnouncement("Filtros e busca limpos. Os oito templates estão visíveis.");
+  }
+
   return (
     <div className="memora-shell template-shell">
-      <BrandHeader activePage="templates" />
+      <div className="template-desktop-header">
+        <BrandHeader activePage="templates" />
+      </div>
+
+      <header className="template-mobile-header">
+        <a className="template-back-link" href="/meus-murais" aria-label="Voltar para Meus murais">
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M15 18 9 12l6-6" />
+          </svg>
+        </a>
+        <a className="template-mobile-wordmark" href="/" aria-label="Memora, início">
+          memora
+        </a>
+        <button
+          className="template-search-toggle"
+          type="button"
+          aria-label={searchOpen ? "Fechar busca de templates" : "Buscar templates"}
+          aria-expanded={searchOpen}
+          aria-controls={searchOpen ? "template-search-input" : undefined}
+          onClick={() => {
+            if (searchOpen) applySearchQuery("");
+            setSearchOpen(!searchOpen);
+          }}
+        >
+          {searchOpen ? (
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path d="m6 6 12 12M18 6 6 18" />
+            </svg>
+          ) : (
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <circle cx="10.8" cy="10.8" r="6.3" />
+              <path d="m15.5 15.5 4.2 4.2" />
+            </svg>
+          )}
+        </button>
+      </header>
+
+      {searchOpen && (
+        <div className="template-mobile-search">
+          <input
+            id="template-search-input"
+            type="search"
+            role="searchbox"
+            aria-label="Buscar templates"
+            autoFocus
+            placeholder="buscar pelo nome ou formato"
+            value={searchQuery}
+            onChange={(event) => applySearchQuery(event.target.value)}
+          />
+        </div>
+      )}
 
       <main className="template-main">
         <section className="template-intro" aria-labelledby="template-page-title">
-          <p className="eyebrow">Templates</p>
-          <h1 id="template-page-title">escolhe o mood</h1>
-          <p>
-            Compare o tipo, a proporção e a quantidade de fotos. O rascunho
-            começa vazio e fica neste navegador.
-          </p>
-        </section>
-
-        <section className="template-catalog-section" aria-labelledby="template-catalog-title">
-          <div className="template-section-heading">
-            <div>
-              <p className="eyebrow">Oito formas de começar</p>
-              <h2 id="template-catalog-title">Catálogo de templates</h2>
-            </div>
-            <p>Você pode explorar os modelos mesmo sem fotografias guardadas.</p>
+          <div className="template-intro-copy">
+            <p className="eyebrow template-desktop-eyebrow">04 · Templates</p>
+            <h1 id="template-page-title" aria-label="Templates: escolha seu mood">
+              <span className="template-title-mobile" aria-hidden="true">
+                escolhe<br />o <span className="template-title-accent">mood</span>
+                <svg className="template-title-mark" viewBox="0 0 44 42" aria-hidden="true">
+                  <path d="M5 16 17 9M15 28l13-2M26 5l2 11" />
+                </svg>
+              </span>
+              <span className="template-title-desktop" aria-hidden="true">
+                qual é o <span className="template-title-accent">mood</span>?
+              </span>
+            </h1>
+            <p className="template-desktop-subtitle">o layout certo pro seu photo dump</p>
           </div>
 
           <div className="template-filter-groups">
@@ -292,7 +453,9 @@ export function TemplateCatalog({
               </div>
             </div>
           </div>
+        </section>
 
+        <section className="template-catalog-section" aria-label="Catálogo de templates">
           <p className="template-announcement" role="status" aria-live="polite" aria-atomic="true">
             {announcement}
           </p>
@@ -319,7 +482,7 @@ export function TemplateCatalog({
               <button
                 className="button button-secondary template-clear-button"
                 type="button"
-                onClick={() => applyFilters({})}
+                onClick={clearAllFilters}
               >
                 Limpar filtros
               </button>
@@ -330,13 +493,16 @@ export function TemplateCatalog({
                 const selected = selectedTemplateId === definition.templateId;
                 const countLabel = photoCountLabel(definition.photoCount);
                 const orientation = getTemplateOrientation(definition.aspectRatio);
+                const ratioLabel = aspectRatioLabel(definition.aspectRatio);
                 return (
                   <li key={definition.templateId}>
                     <button
                       className="template-card"
                       type="button"
                       aria-pressed={selected}
-                      aria-label={`${definition.name}, ${countLabel}, ${ORIENTATION_LABELS[orientation]}`}
+                      aria-label={`${definition.name}, ${countLabel}, ${ORIENTATION_LABELS[orientation]}, proporção ${ratioLabel}`}
+                      data-template-id={definition.templateId}
+                      data-template-version={definition.version}
                       onClick={() => selectTemplate(definition)}
                     >
                       <TemplatePreview definition={definition} />
@@ -346,9 +512,12 @@ export function TemplateCatalog({
                           <span>{countLabel}</span>
                           <span aria-hidden="true">·</span>
                           <span>{ORIENTATION_LABELS[orientation]}</span>
+                          <span aria-hidden="true">·</span>
+                          <span>{ratioLabel}</span>
                         </span>
                         {selected && <span className="template-selected-label">Selecionado</span>}
                       </span>
+                      <span className="template-card-chevron" aria-hidden="true">›</span>
                     </button>
                   </li>
                 );
