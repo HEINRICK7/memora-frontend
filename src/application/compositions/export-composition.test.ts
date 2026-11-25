@@ -7,7 +7,7 @@ import type { CompositionExportRenderer } from "./composition-export-renderer";
 import type { PhotoGateway, SavedPhoto } from "../photo-gateway";
 
 const NOW = new Date("2026-10-24T17:00:00.000Z");
-const template = TEMPLATE_CATALOG_V1.find((item) => item.templateId === "polaroid-single")!;
+const template = TEMPLATE_CATALOG_V1.find((item) => item.templateId === "poster")!;
 const photo: SavedPhoto = {
   id: "asset-ready",
   status: "READY",
@@ -41,7 +41,7 @@ function dependencies(photos: SavedPhoto[] = [photo]) {
       mimeType: "image/png",
       width: 1200,
       height: 1500,
-      fileName: "memora-polaroid-single.png",
+      fileName: "memora-poster.png",
     }),
   };
   return { photoGateway, renderer };
@@ -72,7 +72,7 @@ describe("exportComposition (MEM-007-R01..10)", () => {
     );
     const request = vi.mocked(deps.renderer.render).mock.calls[0]![0];
     expect(request.photos.get(photo.id)?.previewUrl).toBe(photo.previewUrl);
-    expect(result.fileName).toBe("memora-polaroid-single.png");
+    expect(result.fileName).toBe("memora-poster.png");
     expect(JSON.stringify(draft)).toBe(original);
   });
 
@@ -161,7 +161,7 @@ describe("exportComposition (MEM-007-R01..10)", () => {
       mimeType: "image/png",
       width: 1200,
       height: 1500,
-      fileName: "memora-polaroid-single.png",
+      fileName: "memora-poster.png",
     });
 
     await expect(pending).rejects.toMatchObject({ code: "CANCELLED" });

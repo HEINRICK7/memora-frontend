@@ -8,7 +8,7 @@ const FIXED_TIME = "2026-10-24T15:30:00.000Z";
 describe("create local composition draft (MEM-005-R01, R04, AC01-02)", () => {
   it("persists a versioned empty composition and returns its local route id", async () => {
     const store = { create: vi.fn(async (draft) => draft) };
-    const result = await createCompositionDraft("duo-side-by-side", {
+    const result = await createCompositionDraft("vibes", {
       catalog: TEMPLATE_CATALOG_V1,
       store,
       createId: () => FIXED_ID,
@@ -22,7 +22,7 @@ describe("create local composition draft (MEM-005-R01, R04, AC01-02)", () => {
       updatedAt: FIXED_TIME,
       document: {
         schemaVersion: 1,
-        templateId: "duo-side-by-side",
+        templateId: "vibes",
         templateVersion: 1,
         slots: ["photo-1", "photo-2"].map((slotId) => ({
           slotId,
@@ -56,7 +56,7 @@ describe("create local composition draft (MEM-005-R01, R04, AC01-02)", () => {
     const store = { create: vi.fn().mockRejectedValue(storageError) };
 
     await expect(
-      createCompositionDraft("single-photo", {
+      createCompositionDraft("poster", {
         catalog: TEMPLATE_CATALOG_V1,
         store,
         createId: () => FIXED_ID,

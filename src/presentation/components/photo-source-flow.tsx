@@ -5,7 +5,14 @@ import type { ChangeEvent } from "react";
 import { useRouter } from "next/navigation";
 import type { PhotoGateway } from "../../application/photo-gateway";
 import { savePhoto } from "../../application/save-photo";
-import { validatePhotoFile } from "../../domain/photos/validate-photo";
+import {
+  ACCEPTED_PHOTO_INPUT,
+  MAX_BATCH_UPLOAD_COUNT,
+  validatePhotoBatch,
+  type PhotoValidationFailure,
+} from "../../domain/photos/validate-photo";
+import { runUploadQueue } from "../../domain/photos/upload-queue";
+import { optimizePhotoForUpload } from "../../infrastructure/client-image-optimizer";
 import { photoApiGateway } from "../../infrastructure/photo-api-gateway";
 import { BrandWordmark } from "./brand-wordmark";
 import styles from "./photo-source-flow.module.css";
@@ -48,16 +55,14 @@ const sourceCards: ReadonlyArray<{
 
 let photoIdSequence = 0;
 
-function validationMessage(file: File): string | null {
-  const validation = validatePhotoFile(file);
-  if (validation.valid) return null;
-  if (validation.reason === "too-large") {
+function validationMessageForReason(reason: PhotoValidationFailure): string {
+  if (reason === "too-large") {
     return "Cada foto pode ter até 20 MiB.";
   }
-  if (validation.reason === "empty") {
+  if (reason === "empty") {
     return "Este arquivo está vazio. Escolha outra foto.";
   }
-  return "Escolha arquivos JPEG ou PNG.";
+  return "Escolha arquivos JPEG, PNG, WebP ou HEIC.";
 }
 
 export function PhotoSourceFlow({ gateway = photoApiGateway }: PhotoSourceFlowProps) {
@@ -68,7 +73,7 @@ export function PhotoSourceFlow({ gateway = photoApiGateway }: PhotoSourceFlowPr
   const [notice, setNotice] = useState<string | null>(null);
   const [isCameraReady, setIsCameraReady] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
-  const [savingPhotoId, setSavingPhotoId] = useState<string | null>(null);
+  const [savingPhotoIds, setSavingPhotoIds] = useState<Set<string>>(() => new Set());
   const fileInputRef = useRef<HTMLInputElement>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
@@ -102,15 +107,19 @@ export function PhotoSourceFlow({ gateway = photoApiGateway }: PhotoSourceFlowPr
   function addFiles(files: FileList | File[] | null) {
     if (!files?.length) return;
 
+    const remainingCapacity = Math.max(0, MAX_BATCH_UPLOAD_COUNT - photos.length);
+    const batch = validatePhotoBatch(Array.from(files), remainingCapacity);
     const accepted: PendingPhoto[] = [];
     const rejectedReasons = new Set<string>();
-    for (const file of Array.from(files)) {
-      const reason = validationMessage(file);
-      if (reason) {
-        rejectedReasons.add(reason);
-        continue;
-      }
 
+    for (const item of batch.rejected) {
+      rejectedReasons.add(validationMessageForReason(item.reason));
+    }
+    if (batch.truncatedCount > 0) {
+      rejectedReasons.add(`Envie até ${MAX_BATCH_UPLOAD_COUNT} fotos por lote.`);
+    }
+
+    for (const file of batch.accepted) {
       const previewUrl = URL.createObjectURL(file);
       previewUrlsRef.current.add(previewUrl);
       photoIdSequence += 1;
@@ -221,17 +230,33 @@ export function PhotoSourceFlow({ gateway = photoApiGateway }: PhotoSourceFlowPr
     setNotice(null);
     const failedPhotos: PendingPhoto[] = [];
 
-    for (const photo of photos) {
-      setSavingPhotoId(photo.id);
-      try {
-        await savePhoto(photo.file, gateway);
-        releasePreview(photo.previewUrl);
-      } catch {
-        failedPhotos.push(photo);
+    const results = await runUploadQueue(
+      photos,
+      async (photo) => {
+        setSavingPhotoIds((current) => new Set(current).add(photo.id));
+        try {
+          const prepared = await optimizePhotoForUpload(photo.file);
+          await savePhoto(prepared, gateway);
+        } finally {
+          setSavingPhotoIds((current) => {
+            const next = new Set(current);
+            next.delete(photo.id);
+            return next;
+          });
+        }
+      },
+      { concurrency: 3, maxRetries: 0 },
+    );
+
+    for (const entry of results) {
+      if (entry.status === "fulfilled") {
+        releasePreview(entry.item.previewUrl);
+      } else {
+        failedPhotos.push(entry.item);
       }
     }
 
-    setSavingPhotoId(null);
+    setSavingPhotoIds(new Set());
     setIsSaving(false);
     if (failedPhotos.length) {
       setPhotos(failedPhotos);
@@ -288,7 +313,7 @@ export function PhotoSourceFlow({ gateway = photoApiGateway }: PhotoSourceFlowPr
         ref={fileInputRef}
         className={styles.fileInput}
         type="file"
-        accept="image/jpeg,image/png"
+        accept={ACCEPTED_PHOTO_INPUT}
         multiple
         aria-label="Escolher fotografias"
         onChange={handleFilesChanged}
@@ -398,7 +423,7 @@ export function PhotoSourceFlow({ gateway = photoApiGateway }: PhotoSourceFlowPr
               {photos.map((photo) => (
                 <li className={styles.photoTile} key={photo.id}>
                   <img src={photo.previewUrl} alt={photo.file.name} />
-                  {savingPhotoId === photo.id && <span className={styles.savingTag}>guardando</span>}
+                  {savingPhotoIds.has(photo.id) && <span className={styles.savingTag}>guardando</span>}
                   <button
                     className={styles.removePhoto}
                     type="button"

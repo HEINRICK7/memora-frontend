@@ -21,13 +21,13 @@ export function BrandHeader({ activePage }: BrandHeaderProps) {
           Meus murais
         </a>
         <a
-          href="/templates"
+          href="/criar"
           aria-current={activePage === "templates" ? "page" : undefined}
         >
-          Templates
+          Modo Aniversário
         </a>
       </nav>
-      <span className="masthead-note">murais para compartilhar</span>
+      <span className="masthead-note">álbum da festa</span>
     </header>
   );
 }

@@ -3,7 +3,7 @@ import { readFile } from "node:fs/promises";
 import { fileURLToPath } from "node:url";
 
 const apiBase = process.env.MEMORA_API_URL ?? "http://localhost:8080/api/v1";
-const minioOrigin = "http://localhost:9000";
+const minioOrigin = process.env.MEMORA_MINIO_ORIGIN ?? "http://localhost:9000";
 const fixturePath = fileURLToPath(new URL("../fixtures/MEM-007-export-pattern.png", import.meta.url));
 
 type UploadIntent = {
@@ -18,7 +18,7 @@ type CompletedPhoto = { id: string; status: "READY" };
 test("MEM-007-AC16: imagem real do MinIO atravessa o editor e exporta PNG/JPEG", async ({ page, request }) => {
   const fixture = await readFile(fixturePath);
   let photoId: string | undefined;
-  const signedMinioReads: Array<{ status: number; allowOrigin?: string }> = [];
+  const signedMinioReads: number[] = [];
   const cdp = await page.context().newCDPSession(page);
   await cdp.send("Network.enable");
   await cdp.send("Network.setCacheDisabled", { cacheDisabled: true });
@@ -30,11 +30,7 @@ test("MEM-007-AC16: imagem real do MinIO atravessa o editor e exporta PNG/JPEG",
       return;
     }
     if (origin !== minioOrigin || response.request().method() !== "GET") return;
-    const headers = response.headers();
-    signedMinioReads.push({
-      status: response.status(),
-      allowOrigin: headers["access-control-allow-origin"],
-    });
+    signedMinioReads.push(response.status());
   });
 
   try {
@@ -66,13 +62,33 @@ test("MEM-007-AC16: imagem real do MinIO atravessa o editor e exporta PNG/JPEG",
     expect(completed.status).toBe("READY");
 
     await page.goto("/templates");
-    await page.getByRole("button", { name: /Polaroid.*1 foto.*Retrato/i }).click();
-    await page.getByRole("button", { name: /Usar template Polaroid/i }).click();
+    await page.getByRole("button", { name: /poster.*1 foto.*Retrato/i }).click();
+    await page.getByRole("button", { name: /Usar template poster/i }).click();
     await page.waitForURL(/\/editor\//);
     await page.getByRole("button", { name: /Escolher foto para espaço 1/i }).click();
     const dialog = page.getByRole("dialog", { name: /escolher fotografia/i });
-    await dialog.getByRole("button", { name: /Usar fotografia 1/i }).click();
+    await dialog.getByRole("button", { name: "Usar fotografia 1", exact: true }).click();
     await expect(page.getByRole("button", { name: /Exportar composição/i })).toBeEnabled();
+    await expect.poll(() => signedMinioReads.some((status) => status === 200)).toBe(true);
+
+    const photosResponse = await request.get(`${apiBase}/photos`);
+    expect(photosResponse.status()).toBe(200);
+    const photoList = await photosResponse.json() as { items: Array<{ id: string; previewUrl: string }> };
+    const uploadedPhoto = photoList.items.find((photo) => photo.id === photoId);
+    expect(uploadedPhoto).toBeDefined();
+    let corsProbe;
+    try {
+      corsProbe = await request.get(uploadedPhoto!.previewUrl, {
+        headers: {
+          Origin: new URL(page.url()).origin,
+          Range: "bytes=0-0",
+        },
+      });
+    } catch {
+      throw new Error("The signed MinIO preview request failed; signed URL details were redacted.");
+    }
+    expect([200, 206]).toContain(corsProbe.status());
+    expect(corsProbe.headers()["access-control-allow-origin"]).toBe(new URL(page.url()).origin);
 
     const expectedMime = [
       {
@@ -83,7 +99,6 @@ test("MEM-007-AC16: imagem real do MinIO atravessa o editor e exporta PNG/JPEG",
     ] as const;
 
     for (const { option, signature } of expectedMime) {
-      const minioReadCount = signedMinioReads.length;
       await page.getByLabel("Formato da imagem").selectOption(option);
       const downloadPromise = page.waitForEvent("download");
       await page.getByRole("button", { name: /Exportar composição/i }).click();
@@ -123,10 +138,6 @@ test("MEM-007-AC16: imagem real do MinIO atravessa o editor e exporta PNG/JPEG",
         expect(decoded.photoPixel[3]).toBe(255);
       }
       await expect(page.getByRole("status")).toContainText("Exportação concluída");
-
-      const readsForExport = signedMinioReads.slice(minioReadCount);
-      expect(readsForExport.some((read) => read.status === 200)).toBe(true);
-      expect(readsForExport.some((read) => read.allowOrigin === new URL(page.url()).origin)).toBe(true);
     }
   } finally {
     if (photoId) {

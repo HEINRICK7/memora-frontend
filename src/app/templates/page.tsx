@@ -1,5 +1,5 @@
-import { TemplateCatalog } from "../../presentation/components/template-catalog";
+import { redirect } from "next/navigation";
 
 export default function TemplatesPage() {
-  return <TemplateCatalog />;
+  redirect("/criar");
 }

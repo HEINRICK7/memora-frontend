@@ -2,7 +2,7 @@
 
 ## FE-M03-D01 — IDs e nomes pertencem ao registry
 
-Cards usam literalmente os oito nomes e IDs de `TEMPLATE_CATALOG_V1`. Rótulos editoriais da board (“Photo Dump”, “Poster”, “4 Frames”, “Vibes”) não substituem os templates existentes nem sugerem layouts não declarados.
+Cards usam literalmente os oito nomes e IDs de `TEMPLATE_CATALOG_V1`. O registry vigente é o da referência: photo dump, poster, 4 frames, festival, grid, vibes, trip e capa. Layouts anteriores (Single, Duo, Trio, Classic strip, Polaroid, Grid 6 e Story trio) não entram mais no catálogo.
 
 ## FE-M03-D02 — Fotografias de marca são exemplos visuais
 

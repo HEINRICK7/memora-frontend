@@ -36,16 +36,21 @@ describe("TemplateCatalog (FE-M03-AC01..06)", () => {
       "aria-current",
       "page",
     );
+    expect(screen.getByRole("link", { name: "Abrir Meu Niver 3D" })).toHaveAttribute(
+      "href",
+      "/templates/meu-niver",
+    );
+    expect(document.querySelector("canvas")).toBeNull();
 
     const cards = [
-      /Single.*1 foto.*Quadrado.*proporção 1:1/i,
-      /Duo.*2 fotos.*Paisagem.*proporção 4:3/i,
-      /Trio.*3 fotos.*Paisagem.*proporção 4:3/i,
-      /Classic strip.*4 fotos.*Retrato.*proporção 2:3/i,
-      /Grid.*4 fotos.*Quadrado.*proporção 1:1/i,
-      /Polaroid.*1 foto.*Retrato.*proporção 4:5/i,
-      /Grid 6.*6 fotos.*Paisagem.*proporção 4:3/i,
-      /Story trio.*3 fotos.*Retrato.*proporção 2:3/i,
+      /photo dump.*6 fotos.*Paisagem.*proporção 4:3/i,
+      /poster.*1 foto.*Retrato.*proporção 4:5/i,
+      /4 frames.*4 fotos.*Quadrado.*proporção 1:1/i,
+      /festival.*1 foto.*Paisagem.*proporção 4:3/i,
+      /grid.*6 fotos.*Paisagem.*proporção 4:3/i,
+      /vibes.*2 fotos.*Paisagem.*proporção 4:3/i,
+      /trip.*3 fotos.*Retrato.*proporção 2:3/i,
+      /capa.*1 foto.*Quadrado.*proporção 1:1/i,
     ];
     for (const accessibleName of cards) {
       expect(screen.getByRole("button", { name: accessibleName })).toBeInTheDocument();
@@ -79,15 +84,15 @@ describe("TemplateCatalog (FE-M03-AC01..06)", () => {
 
     await user.click(screen.getByRole("button", { name: /buscar templates/i }));
     const search = screen.getByRole("searchbox", { name: /buscar templates/i });
-    await user.type(search, "duo-side-by-side");
+    await user.type(search, "vibes");
 
-    expect(screen.getAllByRole("button", { name: /Duo.*2 fotos/i })).toHaveLength(1);
-    expect(screen.queryByRole("button", { name: /Single.*1 foto/i })).not.toBeInTheDocument();
+    expect(screen.getAllByRole("button", { name: /vibes.*2 fotos/i })).toHaveLength(1);
+    expect(screen.queryByRole("button", { name: /poster.*1 foto/i })).not.toBeInTheDocument();
 
     await user.clear(search);
-    await user.type(search, "Um momento em destaque");
-    expect(screen.getByRole("button", { name: /Trio.*3 fotos/i })).toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: /Duo.*2 fotos/i })).not.toBeInTheDocument();
+    await user.type(search, "Duas fotos lado a lado");
+    expect(screen.getByRole("button", { name: /vibes.*2 fotos/i })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /poster.*1 foto/i })).not.toBeInTheDocument();
 
     await user.clear(search);
     await user.type(search, "not-a-template");
@@ -104,7 +109,7 @@ describe("TemplateCatalog (FE-M03-AC01..06)", () => {
 
     await user.click(within(countFilters()).getByRole("button", { name: "4 fotos" }));
     await user.click(within(ratioFilters()).getByRole("button", { name: "1:1" }));
-    await user.click(screen.getByRole("button", { name: /Grid.*4 fotos.*Quadrado/i }));
+    await user.click(screen.getByRole("button", { name: /4 frames.*4 fotos.*Quadrado/i }));
 
     expect(fetchSpy).not.toHaveBeenCalled();
   });
@@ -124,9 +129,9 @@ describe("TemplateCatalog (FE-M03-AC01..06)", () => {
 
     expect(fourPhotos).toHaveAttribute("aria-pressed", "true");
     expect(square).toHaveAttribute("aria-pressed", "true");
-    expect(screen.getByRole("button", { name: /Grid.*4 fotos.*Quadrado/i })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /4 frames.*4 fotos.*Quadrado/i })).toBeInTheDocument();
     expect(
-      screen.queryByRole("button", { name: /Classic strip.*4 fotos/i }),
+      screen.queryByRole("button", { name: /capa.*1 foto/i }),
     ).not.toBeInTheDocument();
   });
 
@@ -168,7 +173,7 @@ describe("TemplateCatalog (FE-M03-AC01..06)", () => {
     expect(landscape).toHaveFocus();
     expect(landscape).toHaveAttribute("aria-pressed", "true");
 
-    const duo = screen.getByRole("button", { name: /Duo.*2 fotos.*Paisagem/i });
+    const duo = screen.getByRole("button", { name: /vibes.*2 fotos.*Paisagem/i });
     for (let tab = 0; tab < 30 && document.activeElement !== duo; tab += 1) {
       await user.tab();
     }
@@ -178,8 +183,8 @@ describe("TemplateCatalog (FE-M03-AC01..06)", () => {
     expect(duo).toHaveFocus();
     expect(duo).toHaveAttribute("aria-pressed", "true");
     expect(duo).toHaveTextContent(/selecionado/i);
-    expect(screen.getByRole("status")).toHaveTextContent(/duo.*2 fotos/i);
-    expect(screen.getByRole("button", { name: /Trio.*3 fotos/i })).toHaveAttribute(
+    expect(screen.getByRole("status")).toHaveTextContent(/vibes.*2 fotos/i);
+    expect(screen.getByRole("button", { name: /festival.*1 foto/i })).toHaveAttribute(
       "aria-pressed",
       "false",
     );
@@ -193,19 +198,19 @@ describe("TemplateCatalog (FE-M03-AC01..06)", () => {
     const user = userEvent.setup();
     render(<TemplateCatalog />);
 
-    const polaroid = screen.getByRole("button", {
-      name: /Polaroid.*1 foto.*Retrato/i,
+    const poster = screen.getByRole("button", {
+      name: /poster.*1 foto.*Retrato/i,
     });
-    await user.click(polaroid);
-    expect(polaroid).toHaveAttribute("aria-pressed", "true");
-    expect(screen.getByRole("status")).toHaveTextContent(/polaroid.*1 foto/i);
+    await user.click(poster);
+    expect(poster).toHaveAttribute("aria-pressed", "true");
+    expect(screen.getByRole("status")).toHaveTextContent(/poster.*1 foto/i);
 
     await user.click(within(ratioFilters()).getByRole("button", { name: "4:3" }));
 
-    expect(screen.queryByRole("button", { name: /Polaroid/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /poster.*1 foto.*Retrato/i })).not.toBeInTheDocument();
     expect(screen.getByRole("status")).toHaveTextContent(/seleção.*removida/i);
     expect(
-      screen.getByRole("button", { name: /Duo.*2 fotos.*Paisagem/i }),
+      screen.getByRole("button", { name: /vibes.*2 fotos.*Paisagem/i }),
     ).toHaveAttribute("aria-pressed", "false");
   });
 });

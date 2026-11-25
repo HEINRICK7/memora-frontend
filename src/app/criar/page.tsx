@@ -1,5 +1,6 @@
-import { PhotoSourceFlow } from "../../presentation/components/photo-source-flow";
+import { MyMurals } from "../../presentation/components/my-murals";
+import { AdminGate } from "../../presentation/components/admin-gate";
 
 export default function CreateMuralPage() {
-  return <PhotoSourceFlow />;
+  return <AdminGate><MyMurals /></AdminGate>;
 }

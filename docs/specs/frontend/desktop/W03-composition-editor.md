@@ -1,6 +1,6 @@
 # FE-W03 — Editor de composições desktop
 
-**Status:** draft SDD; requer revisão comportamental antes do aceite final.
+**Status:** apresentação aprovada sob o limite funcional de `MEM-005`/`MEM-007`; detalhes e rastreabilidade em `../features/FE-M07-W03-composition-editor/`.
 **Requirement IDs:** FE-W03-R01–R07 · **Acceptance IDs:** FE-W03-AC01–AC08.
 **Route/access:** /editor/[draftId] · rascunho local ou pessoa autorizada, conforme FRONTEND_SPEC.
 
@@ -24,7 +24,7 @@ Arquivo public/telas/image.png, captura completa do editor desktop. A faixa supe
 
 ## Interactions, states and navigation
 
-- Selecionar slot permite trocar foto; mover/redimensionar/crop altera apenas o documento de composição e seus transforms normalizados.
+- Selecionar slot permite escolher, substituir ou remover uma foto real `READY`. Mover/redimensionar/crop não estão implementados no CompositionDocument v1 e não são anunciados como funcionais.
 - Ações de undo/redo, salvar, prévia e exportação existem somente quando já previstas no editor e no modelo MEM-005/MEM-007. Não simular efeitos, filtros ou publicação do mural como edição da composição.
 - Mudança não salva fica indicada; saída com estado dirty segue a confirmação descrita em FRONTEND_SPEC. Falha de persistência local não descarta trabalho silenciosamente.
 - Estados: carregando rascunho, pronto, dirty, salvando, salvo, erro recuperável, exportando e template incompatível. Cada estado preserva canvas e ferramentas sem deslocamento abrupto.
@@ -40,7 +40,7 @@ Arquivo public/telas/image.png, captura completa do editor desktop. A faixa supe
 
 - **FE-W03-AC01:** screenshot desktop tem biblioteca à esquerda, canvas dominante ao centro e propriedades à direita, na proporção da referência.
 - **FE-W03-AC02:** fotos do canvas são as selecionadas para o rascunho e nenhuma fotografia original é alterada.
-- **FE-W03-AC03:** transformação e posição seguem o CompositionDocument normalizado e o template/version reais.
+- **FE-W03-AC03:** posições e dimensões seguem o template/version reais; transforms continuam no padrão v1.
 - **FE-W03-AC04:** nenhuma ferramenta anuncia ação fora do escopo suportado; a publicação do mural não é inferida de “concluir edição”.
 - **FE-W03-AC05:** estados clean/dirty/saving/saved/error são percebidos sem depender apenas de cor e não perdem alterações por falha de rede.
 - **FE-W03-AC06:** Space Grotesk/DM Sans e tokens v2 são usados sem fonte serifada.

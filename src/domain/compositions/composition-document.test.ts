@@ -39,7 +39,7 @@ describe("composition document v1 (MEM-005-LOCAL-01)", () => {
   );
 
   it("preserves template slot order and validates against its exact version", () => {
-    const selectedTemplate = template("duo-side-by-side");
+    const selectedTemplate = template("vibes");
     const document = createCompositionDocument(selectedTemplate);
 
     expect(document.slots.map((slot) => slot.slotId)).toEqual(
@@ -47,12 +47,12 @@ describe("composition document v1 (MEM-005-LOCAL-01)", () => {
     );
     expect(() => assertValidCompositionDocument(document, selectedTemplate)).not.toThrow();
     expect(() =>
-      assertValidCompositionDocument(document, template("grid-four")),
+      assertValidCompositionDocument(document, template("four-frames")),
     ).toThrow();
   });
 
   it("assigns, replaces, reuses, and removes assets immutably per slot", () => {
-    const selectedTemplate = template("duo-side-by-side");
+    const selectedTemplate = template("vibes");
     const original = createCompositionDocument(selectedTemplate);
     const oneFilled = setPhotoForSlot(original, "photo-1", "asset-a");
     const twoFilled = setPhotoForSlot(oneFilled, "photo-2", "asset-a");
@@ -89,7 +89,7 @@ describe("composition document v1 (MEM-005-LOCAL-01)", () => {
   ];
 
   it.each(invalidCases)("rejects an invalid document with %s", (_caseName, mutate) => {
-    const selectedTemplate = template("duo-side-by-side");
+    const selectedTemplate = template("vibes");
     const invalid = clone(createCompositionDocument(selectedTemplate));
     mutate(invalid);
 

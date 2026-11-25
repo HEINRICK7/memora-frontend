@@ -6,12 +6,14 @@ import { CompositionEditor } from "./composition-editor";
 import type { CompositionExportRenderer } from "../../application/compositions/composition-export-renderer";
 import type { LocalCompositionDraft } from "../../domain/compositions/composition-document";
 import { CompositionExportError } from "../../domain/compositions/composition-export";
+import { TEMPLATE_CATALOG_V1 } from "../../domain/templates/template-catalog";
 
 const DRAFT_ID = "82f44972-00f0-4b5c-8711-b9ba6d331df3";
 const timestamp = "2026-10-24T15:30:00.000Z";
 
-function makeDraft(templateId = "duo-side-by-side"): LocalCompositionDraft {
-  const slotIds = templateId === "single-photo" ? ["photo-1"] : ["photo-1", "photo-2"];
+function makeDraft(templateId = "vibes"): LocalCompositionDraft {
+  const template = TEMPLATE_CATALOG_V1.find((item) => item.templateId === templateId);
+  const slotIds = template?.slots.map(({ slotId }) => slotId) ?? ["photo-1", "photo-2"];
   return {
     id: DRAFT_ID,
     createdAt: timestamp,
@@ -65,7 +67,10 @@ function renderEditor({
     list: vi.fn().mockResolvedValue([stored]),
   };
   const photos = {
-    listPhotos: vi.fn().mockImplementation(async () => photoPages.shift() ?? []),
+    listPhotos: vi.fn().mockImplementation(async () => {
+      if (photoPages.length > 1) return photoPages.shift() ?? [];
+      return photoPages[0] ?? [];
+    }),
   };
   const view = render(
     <CompositionEditor
@@ -86,12 +91,153 @@ afterEach(() => {
 });
 
 describe("local composition editor (MEM-005-AC02..16)", () => {
+  it("FE-ED-AC01 keeps one compact mobile bar and preserves the selected template canvas ratio", async () => {
+    renderEditor({ stored: makeDraft("trip") });
+
+    const mobileBar = await screen.findByRole("group", { name: "Barra do editor" });
+    expect(within(mobileBar).getByRole("link", { name: /voltar aos templates/i })).toHaveAttribute(
+      "href",
+      "/templates",
+    );
+    expect(within(mobileBar).getByRole("link", { name: /memora/i })).toBeInTheDocument();
+    expect(within(mobileBar).getByRole("heading", { name: /trip/i })).toBeInTheDocument();
+    expect(mobileBar.querySelector("svg")).not.toBeInTheDocument();
+    expect(within(mobileBar).getByText(/salvo/i)).toHaveAttribute("aria-live", "polite");
+    const canvas = await screen.findByRole("region", { name: /canvas da composição/i });
+    expect(canvas.querySelector(".composition-canvas")?.getAttribute("style")).toContain(
+      `--composition-aspect-ratio: ${2 / 3}`,
+    );
+  });
+
+  it("labels the mobile primary action as the local export it performs", async () => {
+    renderEditor();
+
+    await screen.findByRole("button", { name: "Exportar composição" });
+    expect(document.querySelector(".composition-export-mobile-label")).toHaveTextContent(
+      /^Exportar composição$/,
+    );
+  });
+
+  it("FE-ED-AC01/02 presents the library, canvas and state in one responsive workspace", async () => {
+    renderEditor();
+
+    const workspace = await screen.findByRole("region", { name: "Editor de composição" });
+    expect(within(workspace).getByRole("complementary", { name: "Biblioteca de fotografias" })).toBeInTheDocument();
+    expect(within(workspace).getByRole("region", { name: /canvas da composição/i })).toBeInTheDocument();
+    expect(within(workspace).getByRole("complementary", { name: "Estado do rascunho" })).toBeInTheDocument();
+    expect(Array.from(workspace.children).map((child) => child.className)).toEqual([
+      "composition-library",
+      "composition-canvas-wrap",
+      "composition-side-panel",
+      "composition-toolbar",
+    ]);
+    expect(within(workspace).getByRole("button", { name: /usar fotografia 1 no espaço 1/i })).toBeEnabled();
+  });
+
+  it("FE-ED-AC05/06 shows real navigation and explains tools unavailable in document v1", async () => {
+    const user = userEvent.setup();
+    const { navigate } = renderEditor();
+
+    const tools = await screen.findByRole("navigation", { name: "Ferramentas de composição" });
+    const photos = within(tools).getByRole("button", { name: "Fotos" });
+    await waitFor(() => expect(photos).toBeEnabled());
+    expect(photos).toBeEnabled();
+    const layouts = within(tools).getByRole("link", { name: "Layout" });
+    expect(layouts).toHaveAttribute("href", "/templates");
+
+    const unavailableTools = ["Texto", "Sticker", "Filtro"];
+    for (const name of unavailableTools) {
+      const control = within(tools).getByRole("button", { name });
+      expect(control).toBeDisabled();
+      expect(control).toHaveAccessibleDescription(/ainda não está disponível nesta versão/i);
+    }
+    const adjustments = screen.getByRole("tablist", { name: "Estilo e ajustes" });
+    expect(within(adjustments).getByRole("tab", { name: "Posição" })).toBeDisabled();
+    expect(within(adjustments).getByRole("tab", { name: "Posição" })).toHaveAccessibleDescription(
+      /ainda não está disponível nesta versão/i,
+    );
+    const history = screen.getByRole("group", { name: "Histórico da composição" });
+    for (const name of ["Desfazer", "Refazer"]) {
+      const control = within(history).getByRole("button", { name });
+      expect(control).toBeDisabled();
+      expect(control).toHaveAccessibleDescription(/ainda não está disponível nesta versão/i);
+    }
+
+    await user.click(layouts);
+    expect(navigate).toHaveBeenCalledWith("/templates");
+    await user.click(photos);
+    expect(await screen.findByRole("dialog", { name: /escolher fotografia/i })).toBeInTheDocument();
+  });
+
+  it("uses only a READY library photo and persists its asset id in the targeted slot", async () => {
+    const user = userEvent.setup();
+    const { store } = renderEditor();
+    const library = await screen.findByRole("complementary", { name: "Biblioteca de fotografias" });
+    await user.click(within(library).getByRole("button", { name: /usar fotografia 1 no espaço 1/i }));
+
+    await waitFor(() => expect(store.save).toHaveBeenCalledOnce());
+    expect(store.save.mock.calls[0][0].document.slots[0].assetId).toBe("asset-a");
+    expect(screen.getByRole("img", { name: /fotografia no espaço 1/i })).toHaveAttribute(
+      "src",
+      "https://signed.invalid/preview-a",
+    );
+  });
+
+  it("FE-ED-AC08 gives keyboard access to compact slot actions with accessible names", async () => {
+    const stored = makeDraft("poster");
+    stored.document.slots[0].assetId = "asset-a";
+    renderEditor({ stored });
+
+    const slot = await screen.findByRole("group", { name: "Foto no espaço 1" });
+    expect(slot).toHaveAttribute("tabindex", "0");
+    expect(slot).not.toHaveClass("composition-slot-active");
+    fireEvent.focus(slot);
+    expect(slot).toHaveClass("composition-slot-active");
+    const replace = within(slot).getByRole("button", { name: "Substituir foto no espaço 1" });
+    const remove = within(slot).getByRole("button", { name: "Remover foto do espaço 1" });
+    expect(replace.querySelector("[aria-hidden='true']")).toBeInTheDocument();
+    expect(remove.querySelector("[aria-hidden='true']")).toBeInTheDocument();
+  });
+
+  it("reveals controls only after a photo slot is tapped and keeps one slot active", async () => {
+    const stored = makeDraft("trip");
+    stored.document.slots[0]!.assetId = "asset-a";
+    stored.document.slots[1]!.assetId = "asset-b";
+    renderEditor({ stored });
+
+    const firstSlot = await screen.findByRole("group", { name: "Foto no espaço 1" });
+    const secondSlot = await screen.findByRole("group", { name: "Foto no espaço 2" });
+    expect(firstSlot).not.toHaveClass("composition-slot-active");
+    expect(secondSlot).not.toHaveClass("composition-slot-active");
+
+    fireEvent.click(firstSlot);
+    expect(firstSlot).toHaveClass("composition-slot-active");
+    expect(secondSlot).not.toHaveClass("composition-slot-active");
+
+    fireEvent.click(secondSlot);
+    expect(firstSlot).not.toHaveClass("composition-slot-active");
+    expect(secondSlot).toHaveClass("composition-slot-active");
+  });
+
+  it("opens a stored grid-six draft as grid and rewrites the saved id", async () => {
+    const stored = makeDraft("grid");
+    stored.document.templateId = "grid-six";
+    const save = vi.fn(async (draft: LocalCompositionDraft) => draft);
+    renderEditor({ stored, save });
+
+    expect(await screen.findByRole("heading", { name: /^grid$/i })).toBeInTheDocument();
+    expect(screen.queryByText(/grid 6/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/composição local/i)).not.toBeInTheDocument();
+    await waitFor(() => expect(save).toHaveBeenCalledOnce());
+    expect(save.mock.calls[0]?.[0].document.templateId).toBe("grid");
+  });
+
   it("restores the local document and shows template geometry and empty slots", async () => {
     const fetchSpy = vi.fn();
     vi.stubGlobal("fetch", fetchSpy);
     const { store } = renderEditor();
 
-    expect(await screen.findByRole("heading", { name: /duo/i })).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: /vibes/i })).toBeInTheDocument();
     expect(screen.getByText(/proporção 4:3/i)).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /escolher foto para espaço 1/i })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /escolher foto para espaço 2/i })).toBeInTheDocument();
@@ -185,7 +331,7 @@ describe("local composition editor (MEM-005-AC02..16)", () => {
   });
 
   it("refreshes an expired preview without changing asset association", async () => {
-    const stored = makeDraft("single-photo");
+    const stored = makeDraft("poster");
     stored.document.slots[0].assetId = "asset-a";
     const { photos, store } = renderEditor({
       stored,
@@ -220,7 +366,7 @@ describe("local composition editor (MEM-005-AC02..16)", () => {
     const failure = new Error("QuotaExceededError");
     const save = vi.fn().mockRejectedValueOnce(failure).mockImplementation(async (draft) => draft);
     const navigate = vi.fn();
-    const { store } = renderEditor({ save, navigate });
+    const { store, container } = renderEditor({ save, navigate });
 
     await user.click(await screen.findByRole("button", { name: /escolher foto para espaço 1/i }));
     const chooser = await screen.findByRole("dialog", { name: /escolher fotografia/i });
@@ -228,13 +374,15 @@ describe("local composition editor (MEM-005-AC02..16)", () => {
 
     expect(await screen.findByRole("status")).toHaveTextContent(/alteração ainda não foi salva/i);
     expect(screen.getByRole("button", { name: /tentar salvar novamente/i })).toBeInTheDocument();
-    const backToCatalog = screen.getByRole("link", { name: /voltar aos templates/i });
+    const backToCatalog = within(container.querySelector(".composition-editor-bar")!).getByRole("link", {
+      name: /voltar aos templates/i,
+    });
     const confirm = vi.spyOn(window, "confirm").mockReturnValue(false);
     await user.click(backToCatalog);
     expect(confirm).toHaveBeenCalled();
     expect(navigate).not.toHaveBeenCalled();
 
-    await user.click(screen.getByRole("link", { name: /^Início$/ }));
+    await user.click(screen.getByRole("link", { name: /Memora, início/i }));
     expect(confirm).toHaveBeenCalledTimes(2);
     expect(navigate).not.toHaveBeenCalled();
 
@@ -279,7 +427,7 @@ describe("local composition editor (MEM-005-AC02..16)", () => {
 
 describe("composition export controls (MEM-007-AC03, AC11, AC13, AC15)", () => {
   it("keeps export disabled until every photo slot is ready", async () => {
-    renderEditor({ stored: makeDraft("single-photo") });
+    renderEditor({ stored: makeDraft("poster") });
 
     const exportButton = await screen.findByRole("button", { name: /exportar composição/i });
     expect(exportButton).toBeDisabled();
@@ -288,7 +436,7 @@ describe("composition export controls (MEM-007-AC03, AC11, AC13, AC15)", () => {
 
   it("exports locally, downloads the selected format, and leaves the local draft unchanged", async () => {
     const user = userEvent.setup();
-    const stored = makeDraft("single-photo");
+    const stored = makeDraft("poster");
     stored.document.slots[0]!.assetId = "asset-a";
     const renderer: CompositionExportRenderer = {
       render: vi.fn().mockResolvedValue({
@@ -296,7 +444,7 @@ describe("composition export controls (MEM-007-AC03, AC11, AC13, AC15)", () => {
         mimeType: "image/png",
         width: 1600,
         height: 1600,
-        fileName: "memora-single-photo.png",
+        fileName: "memora-poster.png",
       }),
     };
     const original = JSON.stringify(stored);
@@ -327,7 +475,7 @@ describe("composition export controls (MEM-007-AC03, AC11, AC13, AC15)", () => {
 
   it("aborts the render and never starts a download after cancellation", async () => {
     const user = userEvent.setup();
-    const stored = makeDraft("single-photo");
+    const stored = makeDraft("poster");
     stored.document.slots[0]!.assetId = "asset-a";
     let renderSignal: AbortSignal | undefined;
     const renderer: CompositionExportRenderer = {
@@ -358,7 +506,7 @@ describe("composition export controls (MEM-007-AC03, AC11, AC13, AC15)", () => {
 
   it("shows a recoverable error and retains the export action when Canvas fails", async () => {
     const user = userEvent.setup();
-    const stored = makeDraft("single-photo");
+    const stored = makeDraft("poster");
     stored.document.slots[0]!.assetId = "asset-a";
     const renderer: CompositionExportRenderer = {
       render: vi.fn().mockRejectedValue(Object.assign(new Error("tainted"), { code: "CANVAS_CORS" })),
@@ -380,7 +528,7 @@ describe("composition export controls (MEM-007-AC03, AC11, AC13, AC15)", () => {
 
   it("identifies low-resolution slots and opens the photo chooser for a higher-resolution replacement", async () => {
     const user = userEvent.setup();
-    const stored = makeDraft("single-photo");
+    const stored = makeDraft("poster");
     stored.document.slots[0]!.assetId = "asset-a";
     const renderer: CompositionExportRenderer = {
       render: vi.fn().mockRejectedValue(new CompositionExportError(

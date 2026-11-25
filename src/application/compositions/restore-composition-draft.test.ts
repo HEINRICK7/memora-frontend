@@ -9,7 +9,7 @@ import {
 
 const makeDraft = () => {
   const definition = TEMPLATE_CATALOG_V1.find(
-    (item) => item.templateId === "duo-side-by-side",
+    (item) => item.templateId === "vibes",
   )!;
   const document = createCompositionDocument(definition);
   document.slots[0].assetId = "asset-a";
@@ -32,6 +32,34 @@ const photo = (id: string, previewUrl: string) => ({
 });
 
 describe("restore local composition draft (MEM-005-R05-09, R13)", () => {
+  it("lists and restores a grid-six draft as the grid layout", async () => {
+    const definition = TEMPLATE_CATALOG_V1.find((item) => item.templateId === "grid")!;
+    const document = createCompositionDocument(definition);
+    document.templateId = "grid-six";
+    const stored = {
+      ...makeDraft(),
+      id: "6d5f0a1c-2b33-4e44-9a55-1c2d3e4f5061",
+      document,
+    };
+    const store = {
+      list: vi.fn().mockResolvedValue([stored]),
+      get: vi.fn().mockResolvedValue(stored),
+    };
+
+    const listed = await listCompositionDrafts({ store });
+    expect(listed[0]).toMatchObject({
+      compatible: true,
+      template: expect.objectContaining({ templateId: "grid", name: "grid" }),
+    });
+
+    const restored = await restoreCompositionDraft(stored.id, {
+      store,
+      photos: { listPhotos: vi.fn().mockResolvedValue([]) },
+    });
+    expect(restored.document.templateId).toBe("grid");
+    expect(restored.template.name).toBe("grid");
+  });
+
   it("keeps incompatible records recoverable without exposing their fields in the catalog", async () => {
     const valid = makeDraft();
     const incompatible = {

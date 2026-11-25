@@ -13,6 +13,8 @@ type CanvasCompositionExportRendererDependencies = Readonly<{
   createCanvas?: () => HTMLCanvasElement;
   createImage?: () => HTMLImageElement;
   yieldToBrowser?: () => Promise<void>;
+  createWorker?: () => Worker;
+  supportsOffscreenWorker?: () => boolean;
 }>;
 
 function cancelled(signal: AbortSignal): void {
@@ -169,9 +171,128 @@ async function encodeCanvas(
   return blob;
 }
 
+function defaultSupportsOffscreenWorker(): boolean {
+  return (
+    typeof Worker !== "undefined"
+    && typeof OffscreenCanvas !== "undefined"
+    && typeof createImageBitmap === "function"
+  );
+}
+
+function defaultCreateExportWorker(): Worker {
+  return new Worker(new URL("./composition-export.worker.ts", import.meta.url), {
+    type: "module",
+  });
+}
+
+async function renderInWorker(
+  workerFactory: () => Worker,
+  request: RenderCompositionRequest,
+): Promise<{
+  blob: Blob;
+  mimeType: "image/png" | "image/jpeg";
+  width: number;
+  height: number;
+  fileName: string;
+}> {
+  cancelled(request.signal);
+  const worker = workerFactory();
+
+  return new Promise((resolve, reject) => {
+    let settled = false;
+    const cleanup = () => {
+      request.signal.removeEventListener("abort", onAbort);
+      worker.onmessage = null;
+      worker.onerror = null;
+      worker.terminate();
+    };
+    const finishResolve = (value: {
+      blob: Blob;
+      mimeType: "image/png" | "image/jpeg";
+      width: number;
+      height: number;
+      fileName: string;
+    }) => {
+      if (settled) return;
+      settled = true;
+      cleanup();
+      resolve(value);
+    };
+    const finishReject = (error: unknown) => {
+      if (settled) return;
+      settled = true;
+      cleanup();
+      reject(error);
+    };
+    const onAbort = () =>
+      finishReject(new CompositionExportError("CANCELLED", "Exportação cancelada."));
+
+    request.signal.addEventListener("abort", onAbort, { once: true });
+    if (request.signal.aborted) {
+      onAbort();
+      return;
+    }
+
+    worker.onmessage = (event: MessageEvent) => {
+      const payload = event.data as
+        | { type: "progress"; progress: Parameters<NonNullable<RenderCompositionRequest["onProgress"]>>[0] }
+        | {
+            type: "result";
+            blob: Blob;
+            mimeType: "image/png" | "image/jpeg";
+            width: number;
+            height: number;
+            fileName: string;
+          }
+        | {
+            type: "error";
+            code: CompositionExportError["code"];
+            message: string;
+            slotIds?: string[];
+            assetIds?: string[];
+          };
+      if (!payload) return;
+      if (payload.type === "progress") {
+        request.onProgress?.(payload.progress);
+      } else if (payload.type === "result") {
+        finishResolve({
+          blob: payload.blob,
+          mimeType: payload.mimeType,
+          width: payload.width,
+          height: payload.height,
+          fileName: payload.fileName,
+        });
+      } else if (payload.type === "error") {
+        finishReject(
+          new CompositionExportError(payload.code, payload.message, {
+            slotIds: payload.slotIds,
+            assetIds: payload.assetIds,
+          }),
+        );
+      }
+    };
+
+    worker.onerror = () => {
+      finishReject(new Error("worker-unavailable"));
+    };
+
+    worker.postMessage({
+      document: request.document,
+      template: request.template,
+      photos: [...request.photos.entries()],
+      options: request.options,
+    });
+  });
+}
+
 export function createCanvasCompositionExportRenderer(
   dependencies: CanvasCompositionExportRendererDependencies = {},
 ): CompositionExportRenderer {
+  const hasCustomDomMocks = Boolean(dependencies.createCanvas || dependencies.createImage);
+  const supportsOffscreenWorker =
+    dependencies.supportsOffscreenWorker ??
+    (() => !hasCustomDomMocks && defaultSupportsOffscreenWorker());
+  const createWorker = dependencies.createWorker ?? defaultCreateExportWorker;
   const createCanvas = dependencies.createCanvas ?? (() => {
     if (typeof document === "undefined") {
       throw new CompositionExportError("ENCODING_FAILED", "A exportação precisa ser feita no navegador.");
@@ -185,6 +306,16 @@ export function createCanvasCompositionExportRenderer(
   return {
     async render(request) {
       cancelled(request.signal);
+      if (supportsOffscreenWorker()) {
+        try {
+          return await renderInWorker(createWorker, request);
+        } catch (error) {
+          if (error instanceof CompositionExportError) {
+            throw error;
+          }
+          // Fall back to main-thread canvas rendering if Worker initialization/CORS fails.
+        }
+      }
       request.onProgress?.({ phase: "LOADING_PHOTOS", completedPhotos: 0, totalPhotos: new Set(
         request.document.slots.map((slot) => slot.assetId).filter((id): id is string => Boolean(id)),
       ).size });

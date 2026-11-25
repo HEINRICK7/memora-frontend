@@ -1,7 +1,7 @@
 import type { PhotoGateway, SavedPhoto } from "../photo-gateway";
 import type { LocalCompositionDraft } from "../../domain/compositions/composition-document";
 import { assertValidLocalCompositionDraft, removePhotoFromSlot, setPhotoForSlot } from "../../domain/compositions/composition-document";
-import { TEMPLATE_CATALOG_V1 } from "../../domain/templates/template-catalog";
+import { alignCompositionDraft } from "../../domain/compositions/align-composition-template";
 import type { LocalCompositionDraftStore } from "./local-composition-draft-store";
 
 type EditPhotoDependencies = {
@@ -16,14 +16,12 @@ async function loadDraft(
   draftId: string,
   dependencies: EditPhotoDependencies,
 ): Promise<LocalCompositionDraft> {
-  const draft = dependencies.currentDraft ?? (await dependencies.store.get(draftId));
-  if (!draft) throw new Error("Este rascunho não está disponível neste navegador.");
-  const template = TEMPLATE_CATALOG_V1.find(
-    (item) => item.templateId === draft.document.templateId,
-  );
-  if (!template) throw new Error("A versão deste template não está disponível.");
-  assertValidLocalCompositionDraft(draft, template);
-  return draft;
+  const stored = dependencies.currentDraft ?? (await dependencies.store.get(draftId));
+  if (!stored) throw new Error("Este rascunho não está disponível neste navegador.");
+  const aligned = alignCompositionDraft(stored);
+  if (!aligned.template) throw new Error("A versão deste template não está disponível.");
+  assertValidLocalCompositionDraft(aligned.draft, aligned.template);
+  return aligned.draft;
 }
 
 function withUpdatedDocument(

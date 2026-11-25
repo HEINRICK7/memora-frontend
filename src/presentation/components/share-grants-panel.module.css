@@ -1,0 +1,63 @@
+.freshLink {
+  width: 100%;
+  max-width: none;
+  gap: 18px;
+  padding: clamp(16px, 3vw, 28px);
+  border: 1px solid var(--color-border);
+  background: var(--color-paper);
+}
+
+.freshLink > h1 {
+  margin: 0;
+  font-size: clamp(2rem, 5vw, 3.1rem);
+}
+
+.freshLink > p {
+  max-width: 660px;
+  margin: 0;
+  color: var(--color-muted);
+  line-height: 1.5;
+}
+
+.shareLink {
+  display: grid;
+  gap: 10px;
+  margin-top: 2px;
+  padding-top: 16px;
+  border-top: 1px solid var(--color-border);
+}
+
+.shareLink summary {
+  width: fit-content;
+  cursor: pointer;
+  color: var(--color-cobalt);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.shareLink label {
+  color: var(--color-muted);
+  font-size: 12px;
+}
+
+.shareLink input {
+  width: 100%;
+  min-height: 44px;
+  padding: 10px 12px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background: var(--color-white);
+  color: var(--color-ink);
+  font-family: var(--font-body);
+  overflow-wrap: anywhere;
+}
+
+.freshLink > button {
+  width: fit-content;
+}
+
+@media (max-width: 560px) {
+  .freshLink > button {
+    width: 100%;
+  }
+}

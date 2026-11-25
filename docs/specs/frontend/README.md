@@ -1,6 +1,6 @@
 # Memora frontend — catálogo de telas e SDD
 
-**Estado:** 23 specs; M01/W01 e M03/W04 implementadas e validadas visualmente em Docker. M02 mobile visual foi validada por fixture, mas a navegação dos cards e as demais telas continuam em andamento.
+**Estado:** 23 specs; M01/W01, M03/W04 e M05/M06 implementadas e validadas visualmente em Docker; M02 mobile tem validação visual parcial; M07/W03 tem shell responsivo implementado e comparado, mas ainda diverge nas ferramentas/camadas da composição. As demais telas continuam em andamento.
 **Referências oficiais:** boards em `public/telas/`; assets de demonstração em `public/brand/v2/`.
 **Comportamento e segurança:** `FRONTEND_SPEC.md`, `BACKEND_SPEC.md`, `AGENTS.md` e os contratos de cada feature continuam prevalecendo.
 
@@ -53,6 +53,12 @@ Os nomes dos arquivos M01–M16 mantêm os slugs do brief escrito; o título e o
 | M16 | Perfil e configurações | M16 |
 
 M12 visual (moderação mobile) e W07 (contribuições desktop) têm equivalência comportamental com o mesmo fluxo de moderação; contribuição pendente nunca aparece como publicada.
+
+As evidências parciais de M04/M10/W06, limites dos contratos MEM-008/009 e diferenças em relação às boards estão em `../../visual-validation/shared-mural.md`.
+
+As evidências de M05/M06, capturas responsivas, fluxo de upload confirmado pelo Compose com MinIO e diferenças em relação à fototeca estão em `../../visual-validation/photo-source-selection.md`.
+
+As evidências parciais do editor M07/W03, capturas responsivas, E2E de exportação real e gaps em relação às boards estão em `../../visual-validation/composition-editor.md`.
 
 ## Inventário desktop
 

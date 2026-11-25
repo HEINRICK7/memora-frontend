@@ -32,4 +32,20 @@ describe("Memora v2 design tokens", () => {
     expect(tokens).toContain('"DM Sans"');
     expect(tokens).not.toMatch(/Cormorant|Georgia|(?:^|,)\s*serif(?:,|;|$)/i);
   });
+
+  it("defines the unified spacing, motion, and layering tokens", () => {
+    for (const token of [
+      "--space-xs",
+      "--space-sm",
+      "--space-md",
+      "--space-lg",
+      "--ease-out",
+      "--dur-micro",
+      "--dur-short",
+      "--z-modal",
+      "--radius-pill",
+    ]) {
+      expect(tokens).toMatch(new RegExp(`${token}:\\s*[^;]+;`));
+    }
+  });
 });

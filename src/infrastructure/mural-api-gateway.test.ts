@@ -81,4 +81,59 @@ describe("createMuralApiGateway (MEM-002-API-01..03)", () => {
       code: "invalid_mural_title",
     });
   });
+
+  it("reorders photos with the current ETag and walks every grant page without keeping the secret", async () => {
+    const muralId = "c0f5f693-7160-4e49-9d76-cfaba4edce1c";
+    const firstGrant = {
+      grantId: "11111111-1111-4111-8111-111111111111",
+      scope: "VIEW",
+      status: "ACTIVE",
+      createdAt: "2026-10-24T12:00:00Z",
+      expiresAt: null,
+      revokedAt: null,
+      shareUrl: "http://localhost:3000/m/secret-token",
+      tokenReturned: true,
+    };
+    const secondGrant = {
+      ...firstGrant,
+      grantId: "22222222-2222-4222-8222-222222222222",
+      shareUrl: "http://localhost:3000/m/other-secret",
+    };
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce(new Response(null, { status: 200, headers: { ETag: '"4"' } }))
+      .mockResolvedValueOnce(Response.json({ items: [firstGrant], nextCursor: "page-2" }))
+      .mockResolvedValueOnce(Response.json({ items: [secondGrant], nextCursor: null }));
+    const gateway = createMuralApiGateway("http://localhost:8080/api/v1", fetchMock);
+
+    await expect(
+      gateway.reorderPhotos(muralId, [secondGrant.grantId, firstGrant.grantId], 3),
+    ).resolves.toBe(4);
+    await expect(gateway.listViewGrants(muralId)).resolves.toEqual([
+      {
+        grantId: firstGrant.grantId,
+        scope: "VIEW",
+        status: "ACTIVE",
+        createdAt: firstGrant.createdAt,
+        expiresAt: null,
+        revokedAt: null,
+      },
+      {
+        grantId: secondGrant.grantId,
+        scope: "VIEW",
+        status: "ACTIVE",
+        createdAt: secondGrant.createdAt,
+        expiresAt: null,
+        revokedAt: null,
+      },
+    ]);
+
+    expect(fetchMock.mock.calls[0]?.[0]).toBe(
+      "http://localhost:8080/api/v1/murals/" + muralId + "/photos/order",
+    );
+    expect(fetchMock.mock.calls[0]?.[1]).toEqual(expect.objectContaining({
+      method: "PUT",
+      headers: expect.objectContaining({ "If-Match": '"3"' }),
+    }));
+    expect(String(fetchMock.mock.calls[2]?.[0])).toContain("cursor=page-2");
+  });
 });

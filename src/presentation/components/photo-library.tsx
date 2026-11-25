@@ -4,9 +4,14 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import type { PhotoGateway, SavedPhoto } from "../../application/photo-gateway";
 import { savePhoto } from "../../application/save-photo";
 import {
+  ACCEPTED_PHOTO_INPUT,
+  MAX_BATCH_UPLOAD_COUNT,
   MAX_PHOTO_SIZE_BYTES,
-  validatePhotoFile,
+  validatePhotoBatch,
+  type PhotoValidationFailure,
 } from "../../domain/photos/validate-photo";
+import { runUploadQueue } from "../../domain/photos/upload-queue";
+import { optimizePhotoForUpload } from "../../infrastructure/client-image-optimizer";
 import { photoApiGateway } from "../../infrastructure/photo-api-gateway";
 import { BrandHeader } from "./brand-header";
 
@@ -22,17 +27,14 @@ type PhotoLibraryProps = {
 
 let photoIdSequence = 0;
 
-function validationMessage(file: File): string {
-  const result = validatePhotoFile(file);
-  if (result.valid) return "";
-
-  if (result.reason === "too-large") {
+function validationMessageForReason(reason: PhotoValidationFailure): string {
+  if (reason === "too-large") {
     return "Cada fotografia pode ter até 20 MiB.";
   }
-  if (result.reason === "empty") {
+  if (reason === "empty") {
     return "Este arquivo está vazio. Escolha outra fotografia.";
   }
-  return "Escolha arquivos JPEG ou PNG.";
+  return "Escolha arquivos JPEG, PNG, WebP ou HEIC.";
 }
 
 function formatFileSize(sizeBytes: number): string {
@@ -45,9 +47,11 @@ export function PhotoLibrary({
 }: PhotoLibraryProps) {
   const [selectedPhotos, setSelectedPhotos] = useState<PendingPhoto[]>([]);
   const [savedPhotos, setSavedPhotos] = useState<SavedPhoto[]>([]);
+  const [nextCursor, setNextCursor] = useState<string | null>(null);
+  const [loadingMore, setLoadingMore] = useState(false);
   const [loading, setLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
-  const [savingPhotoId, setSavingPhotoId] = useState<string | null>(null);
+  const [savingPhotoIds, setSavingPhotoIds] = useState<Set<string>>(() => new Set());
   const [notice, setNotice] = useState<string | null>(null);
   const [loadError, setLoadError] = useState(false);
   const previewUrls = useRef(new Set<string>());
@@ -62,14 +66,35 @@ export function PhotoLibrary({
     setLoading(true);
     setLoadError(false);
     try {
-      const photos = await gateway.listPhotos();
-      setSavedPhotos(photos);
+      if (gateway.listPhotosPage) {
+        const page = await gateway.listPhotosPage({ limit: 50 });
+        setSavedPhotos(page.items);
+        setNextCursor(page.nextCursor);
+      } else {
+        const photos = await gateway.listPhotos();
+        setSavedPhotos(photos);
+        setNextCursor(null);
+      }
     } catch {
       setLoadError(true);
     } finally {
       setLoading(false);
     }
   }, [gateway]);
+
+  async function loadMorePhotos() {
+    if (!nextCursor || loadingMore || !gateway.listPhotosPage) return;
+    setLoadingMore(true);
+    try {
+      const page = await gateway.listPhotosPage({ limit: 50, cursor: nextCursor });
+      setSavedPhotos((current) => [...current, ...page.items]);
+      setNextCursor(page.nextCursor);
+    } catch {
+      setNotice("Não foi possível carregar mais fotografias. Tente novamente.");
+    } finally {
+      setLoadingMore(false);
+    }
+  }
 
   useEffect(() => {
     void loadPhotos();
@@ -85,16 +110,19 @@ export function PhotoLibrary({
   function handleFileSelection(files: FileList | null) {
     if (!files?.length) return;
 
+    const remainingCapacity = Math.max(0, MAX_BATCH_UPLOAD_COUNT - selectedPhotos.length);
+    const batch = validatePhotoBatch(Array.from(files), remainingCapacity || 0);
     const validPhotos: PendingPhoto[] = [];
     const rejectedMessages = new Set<string>();
 
-    Array.from(files).forEach((file) => {
-      const message = validationMessage(file);
-      if (message) {
-        rejectedMessages.add(message);
-        return;
-      }
+    for (const item of batch.rejected) {
+      rejectedMessages.add(validationMessageForReason(item.reason));
+    }
+    if (batch.truncatedCount > 0) {
+      rejectedMessages.add(`Envie até ${MAX_BATCH_UPLOAD_COUNT} fotografias por lote.`);
+    }
 
+    batch.accepted.forEach((file) => {
       const previewUrl = URL.createObjectURL(file);
       previewUrls.current.add(previewUrl);
       photoIdSequence += 1;
@@ -132,20 +160,36 @@ export function PhotoLibrary({
     const failedPhotos: PendingPhoto[] = [];
     const saved: SavedPhoto[] = [];
 
-    for (const photo of selectedPhotos) {
-      setSavingPhotoId(photo.id);
-      try {
-        const result = await savePhoto(photo.file, gateway);
-        saved.push(result);
-        revokePreview(photo.previewUrl);
-      } catch {
-        failedPhotos.push(photo);
+    const results = await runUploadQueue(
+      selectedPhotos,
+      async (photo) => {
+        setSavingPhotoIds((current) => new Set(current).add(photo.id));
+        try {
+          const prepared = await optimizePhotoForUpload(photo.file);
+          return await savePhoto(prepared, gateway);
+        } finally {
+          setSavingPhotoIds((current) => {
+            const next = new Set(current);
+            next.delete(photo.id);
+            return next;
+          });
+        }
+      },
+      { concurrency: 3, maxRetries: 0 },
+    );
+
+    for (const entry of results) {
+      if (entry.status === "fulfilled") {
+        saved.push(entry.value);
+        revokePreview(entry.item.previewUrl);
+      } else {
+        failedPhotos.push(entry.item);
       }
     }
 
     setSavedPhotos((current) => [...saved, ...current]);
     setSelectedPhotos(failedPhotos);
-    setSavingPhotoId(null);
+    setSavingPhotoIds(new Set());
     setIsSaving(false);
 
     if (failedPhotos.length) {
@@ -187,8 +231,8 @@ export function PhotoLibrary({
             Escolha fotografias do seu dispositivo e guarde uma cópia privada
             para continuar criando seu mural.
           </p>
-          <a className="button button-primary hero-cta" href="/templates">
-            criar mural
+          <a className="button button-primary hero-cta" href="/criar">
+            criar aniversário
           </a>
         </div>
         <figure className="hero-photos">
@@ -267,7 +311,7 @@ export function PhotoLibrary({
               id="photo-picker"
               className="visually-hidden"
               type="file"
-              accept="image/jpeg,image/png"
+              accept={ACCEPTED_PHOTO_INPUT}
               multiple
               disabled={isSaving}
               onChange={(event) => {
@@ -279,7 +323,7 @@ export function PhotoLibrary({
               Escolher fotografias
             </label>
             <span className="format-note">
-              JPEG ou PNG · até {formatFileSize(MAX_PHOTO_SIZE_BYTES)} por foto
+              JPEG, PNG, WebP ou HEIC · até {formatFileSize(MAX_PHOTO_SIZE_BYTES)} por foto · até {MAX_BATCH_UPLOAD_COUNT} por lote
             </span>
           </div>
         </div>
@@ -312,7 +356,7 @@ export function PhotoLibrary({
                   <div className="photo-caption">
                     <span className="photo-name">{photo.file.name}</span>
                     <span className="photo-detail">
-                      {savingPhotoId === photo.id
+                      {savingPhotoIds.has(photo.id)
                         ? "Guardando…"
                         : formatFileSize(photo.file.size)}
                     </span>
@@ -376,33 +420,48 @@ export function PhotoLibrary({
             </p>
           </div>
         ) : (
-          <div className="photo-grid saved-grid">
-            {savedPhotos.map((photo) => (
-              <article className="photo-card" key={photo.id}>
-                <div className="photo-frame">
-                  <img
-                    src={photo.previewUrl}
-                    alt="Fotografia guardada"
-                    loading="lazy"
-                  />
-                  <button
-                    className="remove-photo"
-                    type="button"
-                    aria-label="Remover fotografia guardada"
-                    onClick={() => void deleteSavedPhoto(photo)}
-                  >
-                    ×
-                  </button>
-                </div>
-                <div className="photo-caption">
-                  <span className="photo-name">Uma lembrança</span>
-                  <span className="photo-detail">
-                    {formatFileSize(photo.sizeBytes)}
-                  </span>
-                </div>
-              </article>
-            ))}
-          </div>
+          <>
+            <div className="photo-grid saved-grid">
+              {savedPhotos.map((photo) => (
+                <article className="photo-card" key={photo.id}>
+                  <div className="photo-frame">
+                    <img
+                      src={photo.thumbnailUrl ?? photo.previewUrl}
+                      alt="Fotografia guardada"
+                      loading="lazy"
+                      decoding="async"
+                    />
+                    <button
+                      className="remove-photo"
+                      type="button"
+                      aria-label="Remover fotografia guardada"
+                      onClick={() => void deleteSavedPhoto(photo)}
+                    >
+                      ×
+                    </button>
+                  </div>
+                  <div className="photo-caption">
+                    <span className="photo-name">Uma lembrança</span>
+                    <span className="photo-detail">
+                      {formatFileSize(photo.sizeBytes)}
+                    </span>
+                  </div>
+                </article>
+              ))}
+            </div>
+            {nextCursor && (
+              <div className="save-row">
+                <button
+                  className="button button-secondary"
+                  type="button"
+                  disabled={loadingMore}
+                  onClick={() => void loadMorePhotos()}
+                >
+                  {loadingMore ? "Carregando…" : "Carregar mais fotos"}
+                </button>
+              </div>
+            )}
+          </>
         )}
       </section>
 

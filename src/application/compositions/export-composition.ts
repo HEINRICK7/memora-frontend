@@ -4,7 +4,7 @@ import {
 } from "../../domain/compositions/composition-export";
 import { assertValidLocalCompositionDraft } from "../../domain/compositions/composition-document";
 import type { LocalCompositionDraft } from "../../domain/compositions/composition-document";
-import { TEMPLATE_CATALOG_V1 } from "../../domain/templates/template-catalog";
+import { alignCompositionDraft } from "../../domain/compositions/align-composition-template";
 import type { PhotoGateway } from "../photo-gateway";
 import type {
   CompositionExportProgress,
@@ -33,11 +33,9 @@ export async function exportComposition(
   cancelled(signal);
   onProgress?.({ phase: "PREPARING" });
 
-  const template = TEMPLATE_CATALOG_V1.find(
-    (candidate) =>
-      candidate.templateId === draft.document?.templateId &&
-      candidate.version === draft.document?.templateVersion,
-  );
+  const aligned = alignCompositionDraft(draft);
+  const template = aligned.template;
+  const working = aligned.draft;
   if (!template) {
     throw new CompositionExportError(
       "INVALID_DRAFT",
@@ -45,7 +43,7 @@ export async function exportComposition(
     );
   }
   try {
-    assertValidLocalCompositionDraft(draft, template);
+    assertValidLocalCompositionDraft(working, template);
   } catch {
     throw new CompositionExportError(
       "INVALID_DRAFT",
@@ -68,7 +66,7 @@ export async function exportComposition(
     );
   }
 
-  const emptySlotIds = draft.document.slots.filter((slot) => !slot.assetId).map((slot) => slot.slotId);
+  const emptySlotIds = working.document.slots.filter((slot) => !slot.assetId).map((slot) => slot.slotId);
   if (emptySlotIds.length) {
     throw new CompositionExportError(
       "INCOMPLETE_COMPOSITION",
@@ -78,7 +76,7 @@ export async function exportComposition(
   }
   cancelled(signal);
   onProgress?.({ phase: "LOADING_PHOTOS" });
-  const slotAssetIds = draft.document.slots.map((slot) => slot.assetId);
+  const slotAssetIds = working.document.slots.map((slot) => slot.assetId);
 
   let readyPhotos;
   try {
@@ -88,7 +86,7 @@ export async function exportComposition(
       "PHOTO_UNAVAILABLE",
       "Não foi possível atualizar as fotografias para exportação.",
       {
-        slotIds: draft.document.slots.filter((slot) => slot.assetId).map((slot) => slot.slotId),
+        slotIds: working.document.slots.filter((slot) => slot.assetId).map((slot) => slot.slotId),
         assetIds: [...new Set(slotAssetIds.filter((id): id is string => Boolean(id)))],
       },
     );
@@ -102,11 +100,11 @@ export async function exportComposition(
     previewUrl: string;
     previewExpiresAt: string;
   }>();
-  for (const slot of draft.document.slots) {
+  for (const slot of working.document.slots) {
     const assetId = slot.assetId!;
     const photo = photosById.get(assetId);
     const expiry = photo ? Date.parse(photo.previewExpiresAt) : Number.NaN;
-    const slotIds = draft.document.slots
+    const slotIds = working.document.slots
       .filter((candidate) => candidate.assetId === assetId)
       .map((candidate) => candidate.slotId);
     if (!photo || photo.status !== "READY" || !Number.isFinite(expiry) || !photo.previewUrl) {
@@ -132,7 +130,7 @@ export async function exportComposition(
 
   cancelled(signal);
   const result = await dependencies.renderer.render({
-    document: draft.document,
+    document: working.document,
     template,
     photos: photoSources,
     options,

@@ -106,66 +106,39 @@ function exportSettings(width: number, height: number): MutableTemplateDefinitio
 
 const TEMPLATE_DEFINITIONS: MutableTemplateDefinition[] = [
   {
-    templateId: "single-photo",
+    templateId: "photo-dump",
     version: 1,
-    name: "Single",
-    description: "Uma fotografia em destaque para guardar um instante.",
+    name: "photo dump",
+    description: "Colagem assimétrica para um dump de fotos do rolê.",
+    photoCount: 6,
+    aspectRatio: 4 / 3,
+    slots: [
+      photoSlot("photo-1", 0, 0, 0.42, 0.62, 0),
+      photoSlot("photo-2", 0.42, 0, 0.28, 0.38, 1),
+      photoSlot("photo-3", 0.7, 0, 0.3, 0.38, 2),
+      photoSlot("photo-4", 0.42, 0.38, 0.58, 0.24, 3),
+      photoSlot("photo-5", 0, 0.62, 0.5, 0.38, 4),
+      photoSlot("photo-6", 0.5, 0.62, 0.5, 0.38, 5),
+    ],
+    decorations: [],
+    export: exportSettings(1800, 1350),
+  },
+  {
+    templateId: "poster",
+    version: 1,
+    name: "poster",
+    description: "Uma fotografia em destaque, em retrato.",
     photoCount: 1,
-    aspectRatio: 1,
+    aspectRatio: 4 / 5,
     slots: [photoSlot("photo-1", 0, 0, 1, 1, 0)],
     decorations: [],
-    export: exportSettings(1600, 1600),
+    export: exportSettings(1200, 1500),
   },
   {
-    templateId: "duo-side-by-side",
+    templateId: "four-frames",
     version: 1,
-    name: "Duo",
-    description: "Duas lembranças lado a lado.",
-    photoCount: 2,
-    aspectRatio: 4 / 3,
-    slots: [
-      photoSlot("photo-1", 0, 0, 0.5, 1, 0),
-      photoSlot("photo-2", 0.5, 0, 0.5, 1, 1),
-    ],
-    decorations: [],
-    export: exportSettings(1600, 1200),
-  },
-  {
-    templateId: "trio-featured",
-    version: 1,
-    name: "Trio",
-    description: "Um momento em destaque, acompanhado por dois detalhes.",
-    photoCount: 3,
-    aspectRatio: 4 / 3,
-    slots: [
-      photoSlot("photo-1", 0, 0, 0.62, 1, 0),
-      photoSlot("photo-2", 0.62, 0, 0.38, 0.5, 1),
-      photoSlot("photo-3", 0.62, 0.5, 0.38, 0.5, 2),
-    ],
-    decorations: [],
-    export: exportSettings(1600, 1200),
-  },
-  {
-    templateId: "classic-strip",
-    version: 1,
-    name: "Classic strip",
-    description: "Quatro momentos em uma sequência vertical.",
-    photoCount: 4,
-    aspectRatio: 2 / 3,
-    slots: [
-      photoSlot("photo-1", 0, 0, 1, 0.25, 0),
-      photoSlot("photo-2", 0, 0.25, 1, 0.25, 1),
-      photoSlot("photo-3", 0, 0.5, 1, 0.25, 2),
-      photoSlot("photo-4", 0, 0.75, 1, 0.25, 3),
-    ],
-    decorations: [],
-    export: exportSettings(1200, 1800),
-  },
-  {
-    templateId: "grid-four",
-    version: 1,
-    name: "Grid",
-    description: "Quatro fotografias em um arranjo equilibrado.",
+    name: "4 frames",
+    description: "Quatro fotografias em grade quadrada.",
     photoCount: 4,
     aspectRatio: 1,
     slots: [
@@ -178,31 +151,21 @@ const TEMPLATE_DEFINITIONS: MutableTemplateDefinition[] = [
     export: exportSettings(1600, 1600),
   },
   {
-    templateId: "polaroid-single",
+    templateId: "festival",
     version: 1,
-    name: "Polaroid",
-    description: "Uma fotografia emoldurada com uma faixa inferior ampla.",
+    name: "festival",
+    description: "Uma foto larga de show ou encontro.",
     photoCount: 1,
-    aspectRatio: 4 / 5,
-    slots: [photoSlot("photo-1", 0.08, 0.06, 0.84, 0.72, 1)],
-    decorations: [
-      {
-        decorationId: "polaroid-paper",
-        styleVersion: 1,
-        x: 0,
-        y: 0,
-        width: 1,
-        height: 1,
-        layerOrder: 0,
-      },
-    ],
-    export: exportSettings(1200, 1500),
+    aspectRatio: 4 / 3,
+    slots: [photoSlot("photo-1", 0, 0, 1, 1, 0)],
+    decorations: [],
+    export: exportSettings(1600, 1200),
   },
   {
-    templateId: "grid-six",
+    templateId: "grid",
     version: 1,
-    name: "Grid 6",
-    description: "Seis fotografias organizadas em três colunas.",
+    name: "grid",
+    description: "Seis fotografias em três colunas.",
     photoCount: 6,
     aspectRatio: 4 / 3,
     slots: Array.from({ length: 6 }, (_, index) =>
@@ -219,9 +182,23 @@ const TEMPLATE_DEFINITIONS: MutableTemplateDefinition[] = [
     export: exportSettings(1800, 1350),
   },
   {
-    templateId: "story-trio",
+    templateId: "vibes",
     version: 1,
-    name: "Story trio",
+    name: "vibes",
+    description: "Duas fotos lado a lado, no clima do grupo.",
+    photoCount: 2,
+    aspectRatio: 4 / 3,
+    slots: [
+      photoSlot("photo-1", 0, 0, 0.5, 1, 0),
+      photoSlot("photo-2", 0.5, 0, 0.5, 1, 1),
+    ],
+    decorations: [],
+    export: exportSettings(1600, 1200),
+  },
+  {
+    templateId: "trip",
+    version: 1,
+    name: "trip",
     description: "Uma imagem ampla com duas lembranças na base.",
     photoCount: 3,
     aspectRatio: 2 / 3,
@@ -232,6 +209,17 @@ const TEMPLATE_DEFINITIONS: MutableTemplateDefinition[] = [
     ],
     decorations: [],
     export: exportSettings(1200, 1800),
+  },
+  {
+    templateId: "capa",
+    version: 1,
+    name: "capa",
+    description: "Uma capa quadrada para o mural.",
+    photoCount: 1,
+    aspectRatio: 1,
+    slots: [photoSlot("photo-1", 0, 0, 1, 1, 0)],
+    decorations: [],
+    export: exportSettings(1600, 1600),
   },
 ];
 
@@ -253,6 +241,21 @@ function freezeTemplateDefinition(definition: MutableTemplateDefinition): Templa
     decorations,
     export: exportSettings,
   });
+}
+
+const LEGACY_TEMPLATE_IDS: Readonly<Record<string, string>> = {
+  "grid-six": "grid",
+  "grid-four": "four-frames",
+  "classic-strip": "four-frames",
+  "story-trio": "trip",
+  "trio-featured": "trip",
+  "duo-side-by-side": "vibes",
+  "single-photo": "capa",
+  "polaroid-single": "poster",
+};
+
+export function resolveTemplateId(templateId: string): string {
+  return LEGACY_TEMPLATE_IDS[templateId] ?? templateId;
 }
 
 export const TEMPLATE_CATALOG_V1: readonly TemplateDefinition[] = Object.freeze(

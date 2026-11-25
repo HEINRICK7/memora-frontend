@@ -1,16 +1,35 @@
+/* Hallmark · pre-emit critique: P5 H5 E5 S5 R5 V5 */
+/* Hallmark · genre: playful · macrostructure: Multi-Page App System · design-system: design.md · designed-as-app */
 :root {
+  /* Core Memora Gen Z v2 palette */
   --color-ink: #191d20;
+  --color-ink-2: #2d3338;
   --color-paper: #f7f7f2;
+  --color-paper-2: #f0f0e9;
+  --color-paper-3: #e6e6dd;
   --color-lime: #d9fd61;
+  --color-lime-soft: #eef8ca;
+  --color-lime-border: #c5e850;
   --color-cobalt: #475cfa;
+  --color-cobalt-strong: #2c43e6;
   --color-coral: #ff725e;
+  --color-coral-hover: #f25f4a;
   --color-white: #ffffff;
   --color-muted: #4e565c;
+  --color-neutral: #3a4247;
+
+  /* Semantic roles */
   --color-background: var(--color-paper);
   --color-foreground: var(--color-ink);
   --color-surface: var(--color-white);
+  --color-surface-subtle: var(--color-paper-2);
+  --color-surface-disabled: #ecece6;
   --color-border: #e3e3dc;
+  --color-rule: var(--color-border);
+  --color-rule-2: #cbcbb9;
   --color-interactive: var(--color-lime);
+  --color-accent: var(--color-lime);
+  --color-accent-ink: var(--color-ink);
   --color-hover: #c8f043;
   --color-focus: var(--color-cobalt);
   --color-selected: var(--color-cobalt);
@@ -23,6 +42,41 @@
   --color-warning-soft: #fff3d6;
   --color-error-soft: #fee4e2;
 
+  /* Dark studio / inverted surfaces */
+  --color-on-dark: var(--color-white);
+  --color-on-dark-muted: #c2c8cc;
+  --color-on-dark-subtle: #98a0a6;
+  --color-on-dark-surface: #22272b;
+  --color-on-dark-surface-2: #2c3338;
+  --color-on-dark-border: #363e44;
+  --color-scrim: rgb(25 29 32 / 64%);
+  --color-scrim-strong: rgb(25 29 32 / 94%);
+
+  /* Composition editor tokens */
+  --color-editor-surface-base: var(--color-ink);
+  --color-editor-text-base: var(--color-ink);
+  --color-editor-surface-panel: #202528;
+  --color-editor-surface-deep: #121517;
+  --color-editor-surface-raised: #2b3235;
+  --color-editor-surface-hover: #2d3236;
+  --color-editor-surface-mid: #343b3e;
+  --color-editor-surface-canvas: #f8f5ee;
+  --color-editor-surface-selected: #e9efdc;
+  --color-editor-text-success: #176b45;
+  --color-editor-border-panel: #dfe1dd;
+  --color-editor-border-dark: #343b3e;
+  --color-editor-border-muted: #424b4e;
+  --color-editor-border-strong: #3d4548;
+  --color-editor-border-canvas: #72787a;
+  --color-editor-text-muted-on-dark: #b3b9bb;
+  --color-editor-text-soft-on-dark: #c3c8ca;
+  --color-editor-text-strong-on-dark: #e1e4e5;
+  --color-editor-text-muted: #51585d;
+  --color-editor-text-disabled: #aab0b2;
+  --color-editor-text-disabled-strong: #e4e7e6;
+  --color-editor-scrollbar: #a9b0b1;
+
+  /* Brand & legacy aliases (preserved for compatibility) */
   --brand-ink: var(--color-ink);
   --brand-paper: var(--color-paper);
   --brand-lime: var(--color-lime);
@@ -50,14 +104,64 @@
   --accent: var(--color-coral);
   --border: var(--color-border);
 
+  /* Typography */
   --font-display: "Space Grotesk", system-ui, sans-serif;
   --font-brand: var(--font-display);
   --font-body: "DM Sans", system-ui, sans-serif;
   --font-editorial: var(--font-display);
-  --radius-sm: 8px;
-  --radius-md: 12px;
-  --radius-lg: 20px;
+
+  --text-xs: 0.75rem;
+  --text-sm: 0.875rem;
+  --text-base: 1rem;
+  --text-md: 1.125rem;
+  --text-lg: 1.375rem;
+  --text-xl: 1.75rem;
+  --text-2xl: 2.25rem;
+  --text-display-s: clamp(2rem, 4.5vw, 3.25rem);
+  --text-display: clamp(2.75rem, 5.4vw, 4.75rem);
+
+  /* 4-pt spacing scale */
   --space-unit: 4px;
+  --space-3xs: 0.25rem;
+  --space-2xs: 0.5rem;
+  --space-xs: 0.75rem;
+  --space-sm: 1rem;
+  --space-md: 1.5rem;
+  --space-lg: 2rem;
+  --space-xl: 3rem;
+  --space-2xl: 4.5rem;
+  --space-3xl: 6rem;
+
+  /* Radii & rules */
+  --rule-hair: 1px;
+  --rule-fine: 2px;
+  --radius-xs: 6px;
+  --radius-sm: 10px;
+  --radius-md: 14px;
+  --radius-lg: 20px;
+  --radius-xl: 26px;
+  --radius-pill: 999px;
+
+  /* Restrained depth (whisper & photo elevation) */
+  --shadow-whisper: 0 2px 8px rgb(25 29 32 / 6%);
+  --shadow-card: 0 10px 28px -12px rgb(25 29 32 / 12%);
+  --shadow-photo: 0 16px 36px -10px rgb(25 29 32 / 22%);
+
+  /* Motion canon */
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-in: cubic-bezier(0.7, 0, 0.84, 0);
+  --ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
+  --dur-micro: 120ms;
+  --dur-short: 220ms;
+  --dur-long: 380ms;
+
+  /* Z-index scale */
+  --z-base: 1;
+  --z-raised: 10;
+  --z-sticky: 20;
+  --z-dropdown: 30;
+  --z-modal: 40;
+  --z-toast: 50;
 }
 
 body {
@@ -77,4 +181,3 @@ body {
   outline: 3px solid var(--brand-cobalt);
   outline-offset: 3px;
 }
-

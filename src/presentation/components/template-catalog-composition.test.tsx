@@ -6,8 +6,8 @@ import { createCompositionDocument } from "../../domain/compositions/composition
 import { TEMPLATE_CATALOG_V1 } from "../../domain/templates/template-catalog";
 import { TemplateCatalog } from "./template-catalog";
 
-const duoTemplate = TEMPLATE_CATALOG_V1.find((template) => template.templateId === "duo-side-by-side")!;
-const singleTemplate = TEMPLATE_CATALOG_V1.find((template) => template.templateId === "single-photo")!;
+const duoTemplate = TEMPLATE_CATALOG_V1.find((template) => template.templateId === "vibes")!;
+const singleTemplate = TEMPLATE_CATALOG_V1.find((template) => template.templateId === "poster")!;
 const newerDraftId = "edb46de7-887d-4ac8-a2ca-caa04d3843ec";
 const olderDraftId = "82f44972-00f0-4b5c-8711-b9ba6d331df3";
 
@@ -34,10 +34,10 @@ describe("template catalog entry to local composition (MEM-005-AC01, AC09, AC14)
 
     expect(screen.queryByRole("button", { name: /usar template/i })).not.toBeInTheDocument();
 
-    await user.click(screen.getByRole("button", { name: /Single.*1 foto/i }));
+    await user.click(screen.getByRole("button", { name: /poster.*1 foto/i }));
 
     expect(
-      screen.getByRole("button", { name: /usar template single/i }),
+      screen.getByRole("button", { name: /usar template poster/i }),
     ).toBeEnabled();
   });
 
@@ -47,7 +47,7 @@ describe("template catalog entry to local composition (MEM-005-AC01, AC09, AC14)
     vi.stubGlobal("fetch", fetchSpy);
     render(<TemplateCatalog />);
 
-    await user.click(screen.getByRole("button", { name: /Single.*1 foto/i }));
+    await user.click(screen.getByRole("button", { name: /poster.*1 foto/i }));
 
     expect(screen.getByText("Selecionado")).toBeInTheDocument();
     expect(fetchSpy).not.toHaveBeenCalled();
@@ -64,10 +64,10 @@ describe("template catalog entry to local composition (MEM-005-AC01, AC09, AC14)
     const navigate = vi.fn();
     render(<CatalogWithDraftPorts draftStore={draftStore} onNavigate={navigate} createId={() => "82f44972-00f0-4b5c-8711-b9ba6d331df3"} />);
 
-    await user.click(screen.getByRole("button", { name: /Single.*1 foto/i }));
+    await user.click(screen.getByRole("button", { name: /poster.*1 foto/i }));
     expect(draftStore.create).not.toHaveBeenCalled();
 
-    await user.click(screen.getByRole("button", { name: /usar template single/i }));
+    await user.click(screen.getByRole("button", { name: /usar template poster/i }));
     await waitFor(() => expect(draftStore.create).toHaveBeenCalledOnce());
     expect(navigate).toHaveBeenCalledWith("/editor/82f44972-00f0-4b5c-8711-b9ba6d331df3");
     expect(fetchSpy).not.toHaveBeenCalled();
@@ -85,8 +85,8 @@ describe("template catalog entry to local composition (MEM-005-AC01, AC09, AC14)
     const navigate = vi.fn();
     render(<CatalogWithDraftPorts draftStore={draftStore} onNavigate={navigate} />);
 
-    await user.click(screen.getByRole("button", { name: /Single.*1 foto/i }));
-    await user.click(screen.getByRole("button", { name: /usar template single/i }));
+    await user.click(screen.getByRole("button", { name: /poster.*1 foto/i }));
+    await user.click(screen.getByRole("button", { name: /usar template poster/i }));
 
     expect(await screen.findByRole("alert")).toHaveTextContent(/não foi possível salvar/i);
     expect(screen.getByText("Selecionado")).toBeInTheDocument();
@@ -120,8 +120,8 @@ describe("template catalog entry to local composition (MEM-005-AC01, AC09, AC14)
     const navigate = vi.fn();
     render(<CatalogWithDraftPorts draftStore={drafts} onNavigate={navigate} />);
 
-    const newer = await screen.findByRole("button", { name: /Continuar.*Duo/i });
-    const older = screen.getByRole("button", { name: /Continuar.*Single/i });
+    const newer = await screen.findByRole("button", { name: /Continuar.*vibes/i });
+    const older = screen.getByRole("button", { name: /Continuar.*poster/i });
     expect(newer.compareDocumentPosition(older) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
 
     await userEvent.setup().click(newer);

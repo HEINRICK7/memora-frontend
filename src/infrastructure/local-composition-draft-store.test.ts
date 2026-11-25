@@ -12,7 +12,7 @@ type TestDraft = {
   updatedAt: string;
   document: {
     schemaVersion: 1;
-    templateId: "single-photo";
+    templateId: "poster";
     templateVersion: 1;
     slots: Array<{
       slotId: "photo-1";
@@ -32,7 +32,7 @@ function draft(id: string, updatedAt: string): TestDraft {
     updatedAt,
     document: {
       schemaVersion: 1,
-      templateId: "single-photo",
+      templateId: "poster",
       templateVersion: 1,
       slots: [
         {

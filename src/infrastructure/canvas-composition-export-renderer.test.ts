@@ -4,7 +4,7 @@ import { createCanvasCompositionExportRenderer } from "./canvas-composition-expo
 import { TEMPLATE_CATALOG_V1 } from "../domain/templates/template-catalog";
 import type { RenderCompositionRequest } from "../application/compositions/composition-export-renderer";
 
-const template = TEMPLATE_CATALOG_V1.find((item) => item.templateId === "polaroid-single")!;
+const template = TEMPLATE_CATALOG_V1.find((item) => item.templateId === "poster")!;
 
 function request(overrides: Partial<RenderCompositionRequest> = {}): RenderCompositionRequest {
   return {
@@ -74,7 +74,7 @@ function rendererHarness({
 }
 
 describe("Canvas 2D composition export renderer (MEM-007-R03..09)", () => {
-  it("draws the linen base, template decoration, and photo in layer order at template dimensions", async () => {
+  it("draws the base and photo in layer order at template dimensions", async () => {
     const harness = rendererHarness();
 
     const result = await harness.service.render(request());
@@ -85,8 +85,6 @@ describe("Canvas 2D composition export renderer (MEM-007-R03..09)", () => {
     expect(harness.context.fillRect).toHaveBeenNthCalledWith(1, 0, 0, 1200, 1500);
     expect(harness.operations).toEqual([
       "fillRect",
-      "fillRect",
-      "strokeRect",
       "drawImage",
       "strokeRect",
       "toBlob",
@@ -96,7 +94,7 @@ describe("Canvas 2D composition export renderer (MEM-007-R03..09)", () => {
       mimeType: "image/png",
       width: 1200,
       height: 1500,
-      fileName: "memora-polaroid-single.png",
+      fileName: "memora-poster.png",
     });
   });
 

@@ -4,7 +4,8 @@ import {
   assertValidLocalCompositionDraft,
   isValidLocalCompositionDraftId,
 } from "../../domain/compositions/composition-document";
-import { TEMPLATE_CATALOG_V1 } from "../../domain/templates/template-catalog";
+import { alignCompositionDraft } from "../../domain/compositions/align-composition-template";
+import { resolveTemplateId, TEMPLATE_CATALOG_V1 } from "../../domain/templates/template-catalog";
 import type { TemplateDefinition } from "../../domain/templates/template-catalog";
 import type { LocalCompositionDraftStore } from "./local-composition-draft-store";
 
@@ -55,17 +56,17 @@ export async function restoreCompositionDraft(
   if (!draft) throw new Error("Este rascunho não está disponível neste navegador.");
 
   const catalog = dependencies.catalog ?? TEMPLATE_CATALOG_V1;
-  const template = catalog.find((item) => item.templateId === draft.document.templateId);
-  if (!template) throw new Error("O template deste rascunho não está mais disponível.");
-  assertValidLocalCompositionDraft(draft, template);
+  const aligned = alignCompositionDraft(draft, catalog);
+  if (!aligned.template) throw new Error("O template deste rascunho não está mais disponível.");
+  assertValidLocalCompositionDraft(aligned.draft, aligned.template);
 
-  const photos = draft.document.slots.some((slot) => slot.assetId)
+  const photos = aligned.draft.document.slots.some((slot) => slot.assetId)
     ? await dependencies.photos.listPhotos()
     : [];
   return {
-    ...draft,
-    template,
-    ...resolvePhotoPreviews(draft.document, photos),
+    ...aligned.draft,
+    template: aligned.template,
+    ...resolvePhotoPreviews(aligned.draft.document, photos),
   };
 }
 
@@ -119,18 +120,22 @@ export async function listCompositionDrafts(
           ? (record.document as Record<string, unknown>)
           : null;
       const templateId = typeof document?.templateId === "string" ? document.templateId : null;
+      const resolvedTemplateId = templateId === null ? null : resolveTemplateId(templateId);
       const templateVersion =
         typeof document?.templateVersion === "number" && Number.isInteger(document.templateVersion)
           ? document.templateVersion
           : null;
       const knownTemplate = catalog.find(
-        (item) => item.templateId === templateId && item.version === templateVersion,
+        (item) => item.templateId === resolvedTemplateId && item.version === templateVersion,
       );
+      const alignedCandidate = resolvedTemplateId && resolvedTemplateId !== templateId && document
+        ? { ...record, document: { ...document, templateId: resolvedTemplateId } }
+        : candidate;
 
       let compatible = false;
       if (knownTemplate) {
         try {
-          assertValidLocalCompositionDraft(candidate, knownTemplate);
+          assertValidLocalCompositionDraft(alignedCandidate, knownTemplate);
           compatible = true;
         } catch {
           // Keep the local record discoverable so the editor can show its recovery state.

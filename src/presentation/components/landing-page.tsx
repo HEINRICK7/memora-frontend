@@ -25,9 +25,6 @@ export function LandingPage() {
             <a href="/meus-murais">Meus murais</a>
             <a href="/templates">Templates</a>
           </nav>
-          <a className="landing-header-cta" href="/criar">
-            criar mural
-          </a>
         </header>
 
         <div className="landing-hero-body">
@@ -39,19 +36,13 @@ export function LandingPage() {
               suas <span>memórias.</span>
             </h1>
             <p className="landing-support">
-              <span className="landing-support-mobile">memórias feitas pra compartilhar.</span>
+              <span className="landing-support-mobile">
+                memórias feitas pra compartilhar. Escaneie o QR Code da festa para ver o álbum e enviar suas fotos.
+              </span>
               <span className="landing-support-desktop">
-                junta a galera, cria um mural e salva tudo que importa.
+                Escaneie o QR Code da festa para abrir o álbum e enviar suas fotos.
               </span>
             </p>
-            <div className="landing-actions">
-              <a className="landing-primary-action" href="/criar">
-                criar mural
-              </a>
-              <a className="landing-secondary-action" href="/biblioteca">
-                escolher fotos
-              </a>
-            </div>
           </div>
 
           <figure className="landing-collage" aria-label="Momentos para guardar">
@@ -74,7 +65,7 @@ export function LandingPage() {
               ✳
             </span>
             <span className="landing-decoration landing-decoration-note" aria-hidden="true">
-              memories, together
+              memórias juntas
             </span>
           </figure>
         </div>

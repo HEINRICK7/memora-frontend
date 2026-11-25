@@ -36,7 +36,7 @@ function expectExportError(action: () => unknown, code: string) {
 
 describe("composition export plan (MEM-007-R02..06)", () => {
   it("plans a complete composition in exact template dimensions and layer order", () => {
-    const template = templateById("polaroid-single");
+    const template = templateById("poster");
     const plan = createCompositionExportPlan({
       document: completeDocument(template),
       template,
@@ -52,13 +52,12 @@ describe("composition export plan (MEM-007-R02..06)", () => {
       backgroundColor: "#F8F5EE",
     });
     expect(plan.layers.map((layer) => [layer.kind, layer.layerOrder])).toEqual([
-      ["decoration", 0],
-      ["photo", 1],
+      ["photo", 0],
     ]);
   });
 
   it("uses the template's declared JPEG quality and accepts a normalized override", () => {
-    const template = templateById("single-photo");
+    const template = templateById("poster");
     const document = completeDocument(template);
 
     expect(
@@ -80,7 +79,7 @@ describe("composition export plan (MEM-007-R02..06)", () => {
   });
 
   it("rejects an empty slot before creating export layers", () => {
-    const template = templateById("duo-side-by-side");
+    const template = templateById("vibes");
     const document = createCompositionDocument(template);
     const filled = setPhotoForSlot(document, "photo-1", "photo-a");
 
@@ -98,7 +97,7 @@ describe("composition export plan (MEM-007-R02..06)", () => {
   it.each([Number.NaN, Number.POSITIVE_INFINITY, -0.01, 1.01])(
     "rejects invalid JPEG quality %s",
     (jpegQuality) => {
-      const template = templateById("single-photo");
+      const template = templateById("poster");
       expectExportError(
         () => createCompositionExportPlan({
           document: completeDocument(template),
@@ -113,9 +112,9 @@ describe("composition export plan (MEM-007-R02..06)", () => {
 
   it("rejects a format not allowed by the selected template", () => {
     const template = {
-      ...templateById("single-photo"),
+      ...templateById("poster"),
       export: {
-        ...templateById("single-photo").export,
+        ...templateById("poster").export,
         formats: ["image/png"] as const,
       },
     } as TemplateDefinition;
@@ -132,7 +131,7 @@ describe("composition export plan (MEM-007-R02..06)", () => {
   });
 
   it("rejects an output canvas above the v1 side or area limits", () => {
-    const base = templateById("single-photo");
+    const base = templateById("poster");
     const tooLarge = {
       ...base,
       export: { ...base.export, width: 1800, height: 1800 },
@@ -150,7 +149,7 @@ describe("composition export plan (MEM-007-R02..06)", () => {
   });
 
   it("does not allow a cover or contain slot to upscale a low-resolution source", () => {
-    const template = templateById("single-photo");
+    const template = templateById("poster");
     const document = completeDocument(template);
 
     expectExportError(
@@ -179,7 +178,7 @@ describe("composition export plan (MEM-007-R02..06)", () => {
   });
 
   it("reports every unavailable referenced asset instead of silently omitting it", () => {
-    const template = templateById("duo-side-by-side");
+    const template = templateById("vibes");
     const document = setPhotoForSlot(
       setPhotoForSlot(createCompositionDocument(template), "photo-1", "photo-a"),
       "photo-2",

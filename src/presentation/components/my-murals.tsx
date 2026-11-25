@@ -14,6 +14,7 @@ import type {
 } from "../../application/mural-photo-gateway";
 import { muralApiGateway } from "../../infrastructure/mural-api-gateway";
 import { muralPhotoApiGateway } from "../../infrastructure/mural-photo-api-gateway";
+import { createUuid } from "../../infrastructure/uuid";
 import {
   countUnicodeCodePoints,
   normalizeMuralDraftInput,
@@ -96,24 +97,6 @@ function sameNormalizedInput(
   right: NormalizedMuralDraftInput,
 ): boolean {
   return left.title === right.title && left.description === right.description;
-}
-
-function createUuid(): string {
-  if (typeof window.crypto.randomUUID === "function") {
-    return window.crypto.randomUUID();
-  }
-
-  const bytes = window.crypto.getRandomValues(new Uint8Array(16));
-  bytes[6] = (bytes[6] & 0x0f) | 0x40;
-  bytes[8] = (bytes[8] & 0x3f) | 0x80;
-  const hex = Array.from(bytes, (byte) => byte.toString(16).padStart(2, "0"));
-  return [
-    hex.slice(0, 4).join(""),
-    hex.slice(4, 6).join(""),
-    hex.slice(6, 8).join(""),
-    hex.slice(8, 10).join(""),
-    hex.slice(10, 16).join(""),
-  ].join("-");
 }
 
 function formatCreatedAt(value: string): string {
@@ -238,6 +221,14 @@ function MuralPhotoCard({ mural, photoGateway }: MuralPhotoCardProps) {
         <p className="mural-card-date">
           Criado em <time dateTime={mural.createdAt}>{formatCreatedAt(mural.createdAt)}</time>
         </p>
+        <a href={`/murais/${mural.id}/configurar`}>
+          {mural.status === "DRAFT" ? "Continuar festa" : "Abrir festa"}
+        </a>
+        {mural.status === "PUBLISHED" && (
+          <a href={`/murais/${mural.id}/compartilhar`}>
+            Gerar QR do Modo Niver
+          </a>
+        )}
       </div>
       <span className={`mural-status mural-status-${mural.status.toLowerCase()}`}>
         {statusLabel(mural.status)}
@@ -260,19 +251,19 @@ function MobileNavigation() {
           <path d="m12 3 9 5-9 5-9-5 9-5Z" />
           <path d="m3 12 9 5 9-5M3 16l9 5 9-5" />
         </svg>
-        <span>Murais</span>
+        <span>Festas</span>
       </a>
-      <a className="mobile-nav-create" href="/templates" aria-label="Criar mural">
+      <a className="mobile-nav-create" href="/criar" aria-label="Criar aniversário">
         <span aria-hidden="true">+</span>
       </a>
-      <a className="mobile-nav-item" href="/templates" aria-label="Modelos">
+      <a className="mobile-nav-item" href="/criar" aria-label="Modo Aniversário">
         <svg viewBox="0 0 24 24" aria-hidden="true">
           <rect x="3" y="3" width="7" height="7" rx="1" />
           <rect x="14" y="3" width="7" height="7" rx="1" />
           <rect x="3" y="14" width="7" height="7" rx="1" />
           <rect x="14" y="14" width="7" height="7" rx="1" />
         </svg>
-        <span>Modelos</span>
+        <span>Aniversário</span>
       </a>
       <button className="mobile-nav-item" type="button" disabled aria-disabled="true">
         <svg viewBox="0 0 24 24" aria-hidden="true">
@@ -306,7 +297,6 @@ export function MyMurals({ gateway: providedGateway, photoGateway: providedPhoto
   const [createError, setCreateError] = useState<string | null>(null);
   const [canRetryCreate, setCanRetryCreate] = useState(false);
   const [isCreating, setIsCreating] = useState(false);
-  const [notice, setNotice] = useState<string | null>(null);
   const requestSequence = useRef(0);
   const statusFilterRef = useRef<StatusFilter>("ALL");
   const loadingMoreRef = useRef(false);
@@ -317,7 +307,6 @@ export function MyMurals({ gateway: providedGateway, photoGateway: providedPhoto
   }, []);
   const creatingRef = useRef(false);
   const creationAttemptRef = useRef<CreationAttempt | null>(null);
-  const newlyCreatedDraftRef = useRef<MuralSummary | null>(null);
 
   useEffect(() => {
     let active = true;
@@ -338,16 +327,8 @@ export function MyMurals({ gateway: providedGateway, photoGateway: providedPhoto
       .then((result) => {
         if (!active || requestId !== requestSequence.current) return;
         const page = filterPageByStatus(result, currentFilter);
-        const createdDraft = newlyCreatedDraftRef.current;
-        const items =
-          currentFilter === "DRAFT" && createdDraft
-            ? uniqueMurals([createdDraft, ...page.items])
-            : page.items;
-        setMurals(items);
+        setMurals(page.items);
         setNextCursor(page.nextCursor);
-        if (createdDraft && currentFilter === "DRAFT") {
-          newlyCreatedDraftRef.current = null;
-        }
       })
       .catch((error: unknown) => {
         if (!active || requestId !== requestSequence.current) return;
@@ -433,7 +414,6 @@ export function MyMurals({ gateway: providedGateway, photoGateway: providedPhoto
     setLoadError(false);
     setLoadMoreError(false);
     setAccessUnavailable(false);
-    setNotice(null);
   }
 
   async function submitDraft() {
@@ -469,7 +449,6 @@ export function MyMurals({ gateway: providedGateway, photoGateway: providedPhoto
     setFieldErrors({});
     setCreateError(null);
     setCanRetryCreate(false);
-    setNotice(null);
 
     try {
       const created = await createMuralDraft(
@@ -478,22 +457,7 @@ export function MyMurals({ gateway: providedGateway, photoGateway: providedPhoto
         attempt.idempotencyKey,
       );
       creationAttemptRef.current = null;
-      newlyCreatedDraftRef.current = created;
-      setTitle("");
-      setDescription("");
-      setFieldErrors({});
-      setCreateError(null);
-      setCanRetryCreate(false);
-      setNotice("Rascunho criado.");
-      setMurals([created]);
-      setNextCursor(null);
-
-      if (statusFilterRef.current === "DRAFT") {
-        setRefreshVersion((version) => version + 1);
-      } else {
-        statusFilterRef.current = "DRAFT";
-        setStatusFilter("DRAFT");
-      }
+      window.location.assign(`/murais/${created.id}/configurar`);
     } catch (error: unknown) {
       if (error instanceof MuralDraftValidationError) {
         const messages: Partial<Record<MuralDraftField, string>> = {};
@@ -552,13 +516,13 @@ export function MyMurals({ gateway: providedGateway, photoGateway: providedPhoto
 
       <main className="mural-main" aria-busy={isBusy}>
         <section className="mural-intro" aria-labelledby="mural-page-title">
-          <p className="eyebrow">Suas lembranças, reunidas</p>
+          <p className="eyebrow">Modo Aniversário</p>
           <h1 id="mural-page-title">
-            seus momentos, <span>todos aqui.</span>
+            crie o álbum <span>da festa.</span>
           </h1>
           <p>
-            Crie rascunhos para organizar suas histórias. A composição e a
-            publicação estarão disponíveis em outra etapa.
+            Crie e publique a festa para gerar o QR Code. Os convidados escaneiam
+            e enviam fotos do celular sem criar uma conta.
           </p>
         </section>
 
@@ -576,8 +540,8 @@ export function MyMurals({ gateway: providedGateway, photoGateway: providedPhoto
           <>
             <section className="mural-create-panel" aria-labelledby="create-mural-title">
               <div className="mural-panel-heading">
-                <p className="eyebrow">Um novo começo</p>
-                <h2 id="create-mural-title">Criar um rascunho</h2>
+                <p className="eyebrow">Sua festa começa aqui</p>
+                <h2 id="create-mural-title">Criar aniversário</h2>
               </div>
 
               <form
@@ -589,7 +553,7 @@ export function MyMurals({ gateway: providedGateway, photoGateway: providedPhoto
                 noValidate
               >
                 <div className="mural-field">
-                  <label htmlFor="mural-title">Nome do mural</label>
+                  <label htmlFor="mural-title">Nome da festa</label>
                   <input
                     id="mural-title"
                     name="title"
@@ -676,32 +640,27 @@ export function MyMurals({ gateway: providedGateway, photoGateway: providedPhoto
 
                 <div className="mural-form-actions">
                   <p className="mural-private-note">
-                    Este rascunho fica privado neste ambiente.
+                    Foto inicial é opcional. Publique a festa para liberar o QR dos convidados.
                   </p>
                   <button
                     className="button button-primary"
                     type="submit"
                     disabled={isCreating}
                   >
-                    {isCreating ? "Criando…" : "Criar rascunho"}
+                    {isCreating ? "Criando…" : "Criar aniversário"}
                   </button>
                 </div>
               </form>
-              {notice && (
-                <p className="mural-notice" role="status" aria-live="polite">
-                  {notice}
-                </p>
-              )}
             </section>
 
             <section className="mural-list-section" aria-labelledby="mural-list-title">
               <div className="mural-list-heading">
                 <div>
-                  <p className="eyebrow">Seus projetos</p>
-                  <h2 id="mural-list-title">Murais guardados</h2>
+                  <p className="eyebrow">Seus eventos</p>
+                  <h2 id="mural-list-title">Aniversários</h2>
                 </div>
                 <p className="mural-list-description">
-                  Seus rascunhos continuam privados até você escolher compartilhá-los.
+                  Abra uma festa para adicionar fotos, publicar e gerar o QR dos convidados.
                 </p>
               </div>
 
@@ -764,17 +723,17 @@ export function MyMurals({ gateway: providedGateway, photoGateway: providedPhoto
                       <div role="status" aria-live="polite">
                         <h3 id="mural-empty-title">
                           {statusFilter === "ALL"
-                            ? "Você ainda não criou nenhum mural."
+                            ? "Você ainda não criou nenhum aniversário."
                             : statusFilter === "DRAFT"
                               ? "Nenhum rascunho por aqui."
                               : statusFilter === "PUBLISHED"
-                                ? "Nenhum mural publicado por aqui."
-                                : "Nenhum mural arquivado por aqui."}
+                                ? "Nenhum aniversário publicado por aqui."
+                                : "Nenhum aniversário arquivado por aqui."}
                         </h3>
                         <p>
                           {statusFilter === "ALL"
-                            ? "Dê um nome para a lembrança que você quer reunir."
-                            : "Experimente outro status ou volte para todos os murais."}
+                            ? "Dê um nome para a festa e reúna as fotos dos convidados."
+                            : "Experimente outro status ou volte para todos os aniversários."}
                         </p>
                       </div>
                       {statusFilter !== "ALL" && (
@@ -787,8 +746,8 @@ export function MyMurals({ gateway: providedGateway, photoGateway: providedPhoto
                         </button>
                       )}
                       {statusFilter === "ALL" && (
-                        <a className="button button-primary" href="/templates">
-                          Criar um mural
+                          <a className="button button-primary" href="/criar">
+                          Criar aniversário
                         </a>
                       )}
                     </div>

@@ -4,6 +4,7 @@ import type {
   PhotoUploadIntent,
   SavedPhoto,
 } from "../application/photo-gateway";
+import { requestHeadersWithCsrf } from "./csrf-headers";
 
 const uploadIntentSchema = z.object({
   uploadId: z.string().min(1),
@@ -19,14 +20,16 @@ const savedPhotoSchema = z.object({
   contentType: z.enum(["image/jpeg", "image/png"]),
   sizeBytes: z.number().int().positive(),
   previewUrl: z.string().url(),
+  thumbnailUrl: z.string().url().optional(),
   previewExpiresAt: z.string().min(1),
 });
 
 const photoListSchema = z.object({
   items: z.array(savedPhotoSchema),
+  nextCursor: z.string().nullable().optional().default(null),
 });
 
-const DEFAULT_API_BASE_URL = "http://localhost:8080/api/v1";
+const DEFAULT_API_BASE_URL = "/api/v1";
 
 function getApiBaseUrl(): string {
   const configured = process.env.NEXT_PUBLIC_MEMORA_API_URL;
@@ -54,6 +57,8 @@ export function createPhotoApiGateway(
       response = await fetcher(apiUrl + path, {
         cache: "no-store",
         ...init,
+        credentials: "same-origin",
+        headers: requestHeadersWithCsrf(init?.method, init?.headers),
       });
     } catch {
       throw communicationError();
@@ -125,12 +130,25 @@ export function createPhotoApiGateway(
       return result.items;
     },
 
+    async listPhotosPage(query?: { limit?: number; cursor?: string | null }) {
+      const params = new URLSearchParams();
+      if (query?.limit) params.set("limit", String(query.limit));
+      if (query?.cursor) params.set("cursor", query.cursor);
+      const suffix = params.toString() ? "?" + params.toString() : "";
+      const result = await requestJson("/photos" + suffix, photoListSchema);
+      return { items: result.items, nextCursor: result.nextCursor ?? null };
+    },
+
     async deletePhoto(photoId: string): Promise<void> {
       let response: Response;
       try {
         response = await fetcher(
           apiUrl + "/photos/" + encodeURIComponent(photoId),
-          { method: "DELETE" },
+          {
+            method: "DELETE",
+            credentials: "same-origin",
+            headers: requestHeadersWithCsrf("DELETE"),
+          },
         );
       } catch {
         throw communicationError();

@@ -1,6 +1,6 @@
 # M07 — Editor
 
-**Status:** draft SDD. **ID visual:** M07.
+**Status:** aprovado como ajuste de apresentação, com comportamento limitado por MEM-005/MEM-007. **ID visual:** M07.
 **Referência:** public/telas/Memora mobile mural creation flow-3.png, terceiro telefone, rótulo 07 CRIE DO SEU JEITO.
 **Rota:** /editor/[draftId].
 
@@ -17,9 +17,9 @@ Editar uma composição local sem alterar os arquivos originais das fotos.
 
 ## Comportamento e estados
 
-- Tap em slot permite escolher/substituir imagem; drag/reposicionamento, crop e zoom seguem os comandos de Composition definidos em FRONTEND_SPEC.
+- Tap em slot permite escolher/substituir imagem. Drag/reposicionamento, crop interativo e zoom permanecem desabilitados porque CompositionDocument v1 não possui esses comandos.
 - Mudanças são não destrutivas e podem ser desfeitas apenas quando houver histórico implementado; arquivos originais não são sobrescritos.
-- Próximo segue M08 com composição e seleção preservadas. Salvar rascunho persiste somente quando o caso de uso correspondente confirma sucesso.
+- A ação principal exporta localmente via MEM-007; não cria nem publica Mural. O draft segue recuperável por `/templates`.
 - Estado dirty, saving, saved, save_failed e exporting são comunicados sem descarte silencioso.
 
 ## Responsividade e acessibilidade
@@ -33,6 +33,8 @@ Editar uma composição local sem alterar os arquivos originais das fotos.
 - **FE-M07-AC01:** editar posição/trocar foto modifica somente CompositionDocument local; hash/bytes do original ficam intactos.
 - **FE-M07-AC02:** voltar com alterações não salvas pede salvar ou descartar; falha de salvamento conserva a composição em estado recuperável.
 - **FE-M07-AC03:** tela permanece usável em 375–414 px, toolbar e CTA não encobrem o canvas.
+
+Composição visual e contratos completos: `docs/specs/frontend/features/FE-M07-W03-composition-editor/`.
 
 ## Dúvidas / limites
 

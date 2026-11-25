@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { CSSProperties, MouseEvent, KeyboardEvent } from "react";
+import { alignCompositionDraft } from "../../domain/compositions/align-composition-template";
 import { assertValidLocalCompositionDraft, removePhotoFromSlot, setPhotoForSlot } from "../../domain/compositions/composition-document";
 import type { LocalCompositionDraft } from "../../domain/compositions/composition-document";
 import { TEMPLATE_CATALOG_V1 } from "../../domain/templates/template-catalog";
@@ -79,6 +80,7 @@ export function CompositionEditor({
   const [readyPhotos, setReadyPhotos] = useState<SavedPhoto[]>([]);
   const [photoLoadState, setPhotoLoadState] = useState<PhotoLoadState>("idle");
   const [activeSlotId, setActiveSlotId] = useState<string | null>(null);
+  const [activeActionSlotId, setActiveActionSlotId] = useState<string | null>(null);
   const [isChooserOpen, setIsChooserOpen] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
@@ -113,46 +115,49 @@ export function CompositionEditor({
         setLoadState("recovery");
         return;
       }
-      const definition = TEMPLATE_CATALOG_V1.find(
-        (item) =>
-          item.templateId === stored.document?.templateId &&
-          item.version === stored.document?.templateVersion,
-      );
+      const aligned = alignCompositionDraft(stored);
+      const definition = aligned.template;
       if (!definition) {
         setLoadState("recovery");
         return;
       }
       try {
-        assertValidLocalCompositionDraft(stored, definition);
+        assertValidLocalCompositionDraft(aligned.draft, definition);
       } catch {
         setLoadState("recovery");
         return;
       }
-      setDraft(stored);
+      if (aligned.draft.document.templateId !== stored.document.templateId) {
+        try {
+          await draftStore.save(aligned.draft);
+        } catch {
+          // The open document already uses the current layout. A failed rewrite keeps the old id until the next save.
+        }
+      }
+      setDraft(aligned.draft);
       setTemplate(definition);
       setJpegQuality(definition.export.jpegQuality);
       setExportFormat(definition.export.formats[0] ?? "image/png");
       setLoadState("ready");
       setAnnouncement("Rascunho local carregado neste navegador.");
 
-      if (stored.document.slots.some((slot) => slot.assetId)) {
-        setPhotoLoadState("loading");
-        try {
-          const photos = readyOnly(await photoGateway.listPhotos());
-          const resolved = previewMapForDraft(stored, photos);
-          setReadyPhotos(photos);
-          setPreviewsByAssetId(resolved.previews);
-          setUnavailableSlotIds(resolved.unavailableSlotIds);
-          setPhotoLoadState("ready");
-        } catch {
-          setPhotoLoadState("error");
-          setPhotoError(true);
-          setAnnouncement("Não foi possível carregar as fotografias. O rascunho foi mantido.");
-        }
-      } else {
-        setPhotoLoadState("idle");
-        setReadyPhotos([]);
-        setPhotoError(false);
+      setPhotoLoadState("loading");
+      setPhotoError(false);
+      try {
+        const photos = readyOnly(await photoGateway.listPhotos());
+        const resolved = previewMapForDraft(aligned.draft, photos);
+        setReadyPhotos(photos);
+        setPreviewsByAssetId(resolved.previews);
+        setUnavailableSlotIds(resolved.unavailableSlotIds);
+        setPhotoLoadState("ready");
+      } catch {
+        setPhotoLoadState("error");
+        setPhotoError(true);
+        setAnnouncement(
+          aligned.draft.document.slots.some((slot) => slot.assetId)
+            ? "Não foi possível carregar as fotografias. O rascunho foi mantido."
+            : "Não foi possível carregar as fotografias guardadas. Tente novamente.",
+        );
       }
     } catch {
       setLoadState("error");
@@ -218,7 +223,8 @@ export function CompositionEditor({
     exportController.current?.abort();
   }, []);
 
-  async function loadPhotosForChooser() {
+  async function loadPhotosForChooser(allowRetry = false): Promise<SavedPhoto[]> {
+    if (photoLoadState === "error" && !allowRetry) return [];
     setPhotoLoadState("loading");
     setPhotoError(false);
     try {
@@ -235,10 +241,12 @@ export function CompositionEditor({
           ? "Nenhuma fotografia guardada está disponível."
           : `${photos.length} fotografias guardadas disponíveis.`,
       );
+      return photos;
     } catch {
       setPhotoLoadState("error");
       setPhotoError(true);
       setAnnouncement("Não foi possível carregar as fotografias. Tente novamente.");
+      return [];
     }
   }
 
@@ -249,11 +257,15 @@ export function CompositionEditor({
     void loadPhotosForChooser();
   }
 
-  async function choosePhoto(photo: SavedPhoto) {
-    if (!draft || !activeSlotId || isSaving) return;
+  async function choosePhoto(
+    photo: SavedPhoto,
+    targetSlotId: string | null = activeSlotId,
+    knownReadyPhotos: readonly SavedPhoto[] = readyPhotos,
+  ) {
+    if (!draft || !targetSlotId || isSaving) return;
     const nextDraft: LocalCompositionDraft = {
       ...draft,
-      document: setPhotoForSlot(draft.document, activeSlotId, photo.id),
+      document: setPhotoForSlot(draft.document, targetSlotId, photo.id),
       updatedAt: new Date().toISOString(),
     };
     setDraft(nextDraft);
@@ -261,17 +273,18 @@ export function CompositionEditor({
     setExportErrorCode(null);
     setExportErrorSlotIds([]);
     setPreviewsByAssetId((current) => new Map(current).set(photo.id, photo.previewUrl));
-    setUnavailableSlotIds((current) => current.filter((slotId) => slotId !== activeSlotId));
+    setUnavailableSlotIds((current) => current.filter((slotId) => slotId !== targetSlotId));
     setHasUnsavedChanges(true);
     setIsSaving(true);
     setStorageError(false);
     setIsChooserOpen(false);
+    setActiveSlotId(null);
 
     try {
-      const saved = await assignCompositionPhoto(draft.id, activeSlotId, photo.id, {
+      const saved = await assignCompositionPhoto(draft.id, targetSlotId, photo.id, {
         store: draftStore,
         photos: photoGateway,
-        knownReadyPhotos: readyPhotos,
+        knownReadyPhotos,
         now: () => new Date(),
         currentDraft: draft,
       });
@@ -284,6 +297,29 @@ export function CompositionEditor({
     } finally {
       setIsSaving(false);
     }
+  }
+
+  async function chooseLibraryPhoto(photoId: string, targetSlotId: string) {
+    if (!draft || isSaving) return;
+    const photos = await loadPhotosForChooser();
+    const photo = photos.find((item) => item.id === photoId && item.status === "READY");
+    if (!photo) {
+      setAnnouncement("Esta fotografia não está mais disponível. Escolha outra.");
+      return;
+    }
+    await choosePhoto(photo, targetSlotId, photos);
+  }
+
+  function openPhotosTool(trigger: HTMLElement) {
+    if (!draft || isSaving) return;
+    const targetSlot = draft.document.slots.find(
+      (slot) => !slot.assetId || unavailableSlotIds.includes(slot.slotId),
+    );
+    if (!targetSlot) {
+      setAnnouncement("Todos os espaços já têm fotografia. Escolha um espaço no canvas para substituir.");
+      return;
+    }
+    openChooser(targetSlot.slotId, trigger);
   }
 
   async function removePhoto(slotId: string) {
@@ -394,11 +430,22 @@ export function CompositionEditor({
 
   const filledSlotCount = draft?.document.slots.filter((slot) => slot.assetId).length ?? 0;
   const allSlotsFilled = !!draft && filledSlotCount === draft.document.slots.length;
+  const nextPhotoSlot = draft?.document.slots.find(
+    (slot) => !slot.assetId || unavailableSlotIds.includes(slot.slotId),
+  ) ?? null;
+  const nextPhotoSlotIndex = nextPhotoSlot
+    ? draft?.document.slots.findIndex((slot) => slot.slotId === nextPhotoSlot.slotId)! + 1
+    : null;
   const exportIsBusy = ["PREPARING", "LOADING_PHOTOS", "RENDERING", "ENCODING", "DOWNLOADING"]
     .includes(exportPhase);
   const exportHasUnavailablePhoto = !!draft && draft.document.slots.some(
     (slot) => slot.assetId && unavailableSlotIds.includes(slot.slotId),
   );
+  const mobileSaveStatus = isSaving
+    ? "salvando"
+    : hasUnsavedChanges
+      ? "pendente"
+      : "salvo";
 
   function exportErrorMessageFor(error: unknown): string {
     if (!(error instanceof CompositionExportError)) {
@@ -577,27 +624,95 @@ export function CompositionEditor({
 
   return (
     <div className="memora-shell editor-shell" onClickCapture={handleInternalNavigation}>
-      <BrandHeader activePage="templates" />
-      <main className="composition-main">
-        <div className="composition-topline">
-          <a
-            className="button button-tertiary"
-            href="/templates"
-          >
-            Voltar aos templates
-          </a>
-          <p className="local-only-note">Rascunho salvo somente neste navegador</p>
+      <div className="composition-editor-bar" role="group" aria-label="Barra do editor">
+        <a className="composition-mobile-back" href="/templates" aria-label="Voltar aos templates">
+          <span aria-hidden="true">‹</span>
+          <span className="composition-back-label">Templates</span>
+        </a>
+        <a className="composition-mobile-brand" href="/" aria-label="Memora, início">
+          <span className="composition-mobile-wordmark">memora</span>
+        </a>
+        <div className="composition-editor-title-group">
+          <h1 className="composition-editor-title">{template.name}</h1>
+          <span className="composition-editor-ratio">Proporção {formatRatio(template.aspectRatio)}</span>
         </div>
-
-        <header className="composition-heading">
-          <p className="eyebrow">Composição local</p>
-          <h1>{template.name}</h1>
-          <p>{template.description}</p>
-          <p className="composition-ratio">Proporção {formatRatio(template.aspectRatio)}</p>
-        </header>
-
+        <div className="composition-history-controls" role="group" aria-label="Histórico da composição">
+          <button type="button" aria-label="Desfazer" aria-describedby="composition-unsupported-explanation" disabled>
+            ↶
+          </button>
+          <button type="button" aria-label="Refazer" aria-describedby="composition-unsupported-explanation" disabled>
+            ↷
+          </button>
+        </div>
+        <span className="composition-mobile-save-state" aria-live="polite" aria-atomic="true">
+          {mobileSaveStatus}
+        </span>
+      </div>
+      <main className="composition-main">
         <section className="composition-workspace" aria-label="Editor de composição">
-          <div className="composition-canvas-wrap">
+          <aside className="composition-library" aria-label="Biblioteca de fotografias">
+            <div className="composition-library-heading">
+              <div>
+                <p className="eyebrow">Biblioteca privada</p>
+                <h2>Fotos do rolê</h2>
+              </div>
+              <span className="composition-library-count">{readyPhotos.length}</span>
+            </div>
+            <p className="composition-library-help">
+              Fotos salvas na sua biblioteca, prontas para preencher um espaço.
+            </p>
+            {photoLoadState === "loading" ? (
+              <p className="composition-library-state" role="status">Carregando fotos…</p>
+            ) : photoLoadState === "error" || photoError ? (
+              <div className="composition-library-state" role="status">
+                <p>Não foi possível carregar as fotos guardadas.</p>
+                <button className="composition-library-retry" type="button" onClick={() => void loadPhotosForChooser(true)}>
+                  Tentar novamente
+                </button>
+              </div>
+            ) : readyPhotos.length === 0 ? (
+              <div className="composition-library-state">
+                <p>Nenhuma fotografia guardada.</p>
+                <a href="/biblioteca">Abrir galeria</a>
+              </div>
+            ) : (
+              <>
+                {nextPhotoSlot && (
+                  <p className="composition-library-help">
+                    Toque numa foto para preencher o espaço {nextPhotoSlotIndex}.
+                  </p>
+                )}
+                {!nextPhotoSlot && (
+                  <p className="composition-library-help" id="composition-library-full">
+                    Todos os espaços estão preenchidos. Use “Substituir” no canvas para trocar uma foto.
+                  </p>
+                )}
+                <ul className="composition-library-photos" aria-label="Fotografias prontas">
+                  {readyPhotos.map((photo, index) => (
+                    <li key={photo.id}>
+                      <button
+                        className="composition-library-photo"
+                        type="button"
+                        aria-label={nextPhotoSlot
+                          ? `Usar fotografia ${index + 1} no espaço ${nextPhotoSlotIndex}`
+                          : `Fotografia ${index + 1}; todos os espaços preenchidos`}
+                        aria-describedby={!nextPhotoSlot ? "composition-library-full" : undefined}
+                        onClick={() => {
+                          if (nextPhotoSlot) void chooseLibraryPhoto(photo.id, nextPhotoSlot.slotId);
+                        }}
+                        disabled={!nextPhotoSlot || isSaving}
+                      >
+                        <img src={photo.previewUrl} alt={`Fotografia ${index + 1}`} />
+                        <span>{nextPhotoSlot ? "Usar foto" : "No arranjo"}</span>
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              </>
+            )}
+          </aside>
+
+          <div className="composition-canvas-wrap" role="region" aria-label={`Canvas da composição ${template.name}`}>
             <div className="composition-canvas" style={canvasStyle} aria-label={`Prévia ${template.name}`}>
               {template.decorations.map((decoration) => (
                 <span
@@ -619,8 +734,25 @@ export function CompositionEditor({
                 const unavailable = unavailableSlotIds.includes(slot.slotId);
                 return (
                   <div
-                    className={`composition-slot${slot.assetId ? " composition-slot-filled" : " composition-slot-empty"}${unavailable ? " composition-slot-unavailable" : ""}`}
+                    className={`composition-slot${slot.assetId ? " composition-slot-filled" : " composition-slot-empty"}${unavailable ? " composition-slot-unavailable" : ""}${activeActionSlotId === slot.slotId ? " composition-slot-active" : ""}`}
                     key={definition.slotId}
+                    role={slot.assetId ? "group" : undefined}
+                    aria-label={slot.assetId ? `Foto no espaço ${index + 1}` : undefined}
+                    tabIndex={slot.assetId ? 0 : undefined}
+                    onFocusCapture={() => {
+                      if (slot.assetId) setActiveActionSlotId(slot.slotId);
+                    }}
+                    onBlurCapture={(event) => {
+                      const nextTarget = event.relatedTarget;
+                      if (!(nextTarget instanceof Node) || !event.currentTarget.contains(nextTarget)) {
+                        setActiveActionSlotId((current) => current === slot.slotId ? null : current);
+                      }
+                    }}
+                    onClick={(event) => {
+                      if (slot.assetId && !(event.target instanceof Element && event.target.closest("button"))) {
+                        setActiveActionSlotId(slot.slotId);
+                      }
+                    }}
                     style={{
                       left: `${definition.x * 100}%`,
                       top: `${definition.y * 100}%`,
@@ -649,7 +781,8 @@ export function CompositionEditor({
                             }}
                             onClick={(event) => openChooser(slot.slotId, event.currentTarget)}
                           >
-                            Substituir
+                            <span className="composition-action-icon" aria-hidden="true">↻</span>
+                            <span className="composition-slot-action-label">Substituir</span>
                           </button>
                           <button
                             className="composition-slot-action"
@@ -658,7 +791,8 @@ export function CompositionEditor({
                             onClick={() => void removePhoto(slot.slotId)}
                             disabled={isSaving}
                           >
-                            Remover
+                            <span className="composition-action-icon" aria-hidden="true">×</span>
+                            <span className="composition-slot-action-label">Remover</span>
                           </button>
                         </div>
                       </>
@@ -671,7 +805,8 @@ export function CompositionEditor({
                           aria-label={`Substituir foto no espaço ${index + 1}`}
                           onClick={(event) => openChooser(slot.slotId, event.currentTarget)}
                         >
-                          Substituir
+                          <span className="composition-action-icon" aria-hidden="true">↻</span>
+                          <span className="composition-slot-action-label">Substituir</span>
                         </button>
                         <button
                           className="composition-slot-action"
@@ -680,7 +815,8 @@ export function CompositionEditor({
                           onClick={() => void removePhoto(slot.slotId)}
                           disabled={isSaving}
                         >
-                          Remover
+                          <span className="composition-action-icon" aria-hidden="true">×</span>
+                          <span className="composition-slot-action-label">Remover</span>
                         </button>
                       </div>
                     ) : (
@@ -719,6 +855,15 @@ export function CompositionEditor({
           </div>
 
           <aside className="composition-side-panel" aria-label="Estado do rascunho">
+            <div className="composition-adjustment-tabs" role="tablist" aria-label="Estilo e ajustes">
+              <span role="tab" aria-selected="true">Imagem</span>
+              <button role="tab" type="button" aria-describedby="composition-unsupported-explanation" disabled>
+                Canvas
+              </button>
+              <button role="tab" type="button" aria-label="Posição" aria-describedby="composition-unsupported-explanation" disabled>
+                posição
+              </button>
+            </div>
             <h2>Seu arranjo</h2>
             <p>{filledSlotCount} de {draft.document.slots.length} espaços preenchidos</p>
             <p className="composition-private-copy">
@@ -786,20 +931,6 @@ export function CompositionEditor({
                   aria-label="Progresso ao carregar fotografias"
                 />
               )}
-              {exportIsBusy ? (
-                <button className="button button-secondary" type="button" onClick={cancelExport}>
-                  Cancelar exportação
-                </button>
-              ) : (
-                <button
-                  className="button button-primary"
-                  type="button"
-                  onClick={() => void startExport()}
-                  disabled={!allSlotsFilled || exportHasUnavailablePhoto || photoLoadState === "error" || isSaving}
-                >
-                  Exportar composição
-                </button>
-              )}
               {exportErrorMessage && (
                 <div className="composition-inline-alert" role="alert">
                   <p>{exportErrorMessage}</p>
@@ -828,6 +959,71 @@ export function CompositionEditor({
               )}
             </div>
           </aside>
+
+          <div className="composition-toolbar">
+            <nav aria-label="Ferramentas de composição">
+              <ul>
+                <li>
+                  <button
+                    className="composition-tool-button"
+                    type="button"
+                    onClick={(event) => openPhotosTool(event.currentTarget)}
+                    disabled={isSaving || photoLoadState === "loading"}
+                  >
+                    <span aria-hidden="true">▧</span> Fotos
+                  </button>
+                </li>
+                <li>
+                  <a
+                    className="composition-tool-button"
+                    href={isSaving ? undefined : "/templates"}
+                    aria-disabled={isSaving}
+                  >
+                    <span aria-hidden="true">▦</span> Layout
+                  </a>
+                </li>
+                {[
+                  ["Texto", "Aa"],
+                  ["Sticker", "☺"],
+                  ["Filtro", "◉"],
+                ].map(([label, icon]) => (
+                  <li key={label}>
+                    <button
+                      className="composition-tool-button composition-tool-unavailable"
+                      type="button"
+                      disabled
+                      aria-describedby="composition-unsupported-explanation"
+                    >
+                      <span aria-hidden="true">{icon}</span> {label}
+                    </button>
+                  </li>
+                ))}
+              </ul>
+              <p className="composition-visually-hidden" id="composition-unsupported-explanation">
+                Esta ferramenta ainda não está disponível nesta versão do editor.
+              </p>
+            </nav>
+            {exportIsBusy ? (
+              <button className="button button-secondary composition-export-action" type="button" onClick={cancelExport}>
+                Cancelar exportação
+              </button>
+            ) : (
+              <button
+                className="button button-primary composition-export-action"
+                type="button"
+                onClick={() => void startExport()}
+                aria-label="Exportar composição"
+                aria-describedby="composition-export-explanation"
+                disabled={!allSlotsFilled || exportHasUnavailablePhoto || photoLoadState === "error" || isSaving}
+              >
+                <span className="composition-export-label">Exportar composição</span>
+                <span className="composition-export-mobile-label">Exportar composição</span>
+              </button>
+            )}
+            <p className="composition-visually-hidden" id="composition-export-explanation">
+              Baixa a composição como imagem neste dispositivo. Não publica nem compartilha o mural.
+            </p>
+          </div>
         </section>
       </main>
 
@@ -870,7 +1066,7 @@ export function CompositionEditor({
             ) : photoLoadState === "error" || photoError ? (
               <div className="composition-selector-state" role="alert">
                 <p>Não foi possível carregar as fotografias guardadas.</p>
-                <button className="button button-secondary" type="button" onClick={() => void loadPhotosForChooser()}>
+                  <button className="button button-secondary" type="button" onClick={() => void loadPhotosForChooser(true)}>
                   Tentar carregar fotografias novamente
                 </button>
               </div>

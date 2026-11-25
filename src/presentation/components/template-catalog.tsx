@@ -51,42 +51,40 @@ const ORIENTATION_LABELS: Record<TemplateOrientation, string> = {
 };
 
 const TEMPLATE_PREVIEW_IMAGES: Readonly<Record<string, readonly string[]>> = {
-  "single-photo": ["/brand/v2/photos/hero/festival-selfie.webp"],
-  "duo-side-by-side": [
+  "photo-dump": [
+    "/brand/v2/photos/murals/friday-party.webp",
+    "/brand/v2/photos/gallery/campus-friends.webp",
+    "/brand/v2/photos/gallery/festival-lights.webp",
+    "/brand/v2/photos/hero/festival-selfie.webp",
+    "/brand/v2/photos/gallery/beach-campfire.webp",
+    "/brand/v2/photos/gallery/concert-friends.webp",
+  ],
+  poster: ["/brand/v2/photos/gallery/sunset-viewpoint.webp"],
+  "four-frames": [
+    "/brand/v2/photos/gallery/golden-beach.webp",
     "/brand/v2/photos/murals/summer-beach.webp",
     "/brand/v2/photos/gallery/coastal-roadtrip.webp",
-  ],
-  "trio-featured": [
-    "/brand/v2/photos/murals/friday-party.webp",
-    "/brand/v2/photos/gallery/festival-lights.webp",
-    "/brand/v2/photos/gallery/campus-friends.webp",
-  ],
-  "classic-strip": [
-    "/brand/v2/photos/murals/skate-action.webp",
-    "/brand/v2/photos/murals/roadtrip-van.webp",
     "/brand/v2/photos/gallery/sunset-viewpoint.webp",
-    "/brand/v2/photos/gallery/golden-beach.webp",
   ],
-  "grid-four": [
+  festival: ["/brand/v2/photos/gallery/festival-lights.webp"],
+  grid: [
     "/brand/v2/photos/birthday/selfie.webp",
     "/brand/v2/photos/birthday/cake.webp",
     "/brand/v2/photos/birthday/wish.webp",
     "/brand/v2/photos/birthday/friends.webp",
-  ],
-  "polaroid-single": ["/brand/v2/photos/murals/birthday-party.webp"],
-  "grid-six": [
-    "/brand/v2/photos/gallery/beach-campfire.webp",
     "/brand/v2/photos/gallery/campus-friends.webp",
-    "/brand/v2/photos/gallery/concert-friends.webp",
-    "/brand/v2/photos/gallery/festival-lights.webp",
+    "/brand/v2/photos/murals/skate-action.webp",
+  ],
+  vibes: [
+    "/brand/v2/photos/murals/summer-beach.webp",
+    "/brand/v2/photos/gallery/coastal-roadtrip.webp",
+  ],
+  trip: [
+    "/brand/v2/photos/murals/roadtrip-van.webp",
+    "/brand/v2/photos/gallery/coastal-roadtrip.webp",
     "/brand/v2/photos/gallery/golden-beach.webp",
-    "/brand/v2/photos/gallery/sunset-viewpoint.webp",
   ],
-  "story-trio": [
-    "/brand/v2/photos/murals/friday-party.webp",
-    "/brand/v2/photos/gallery/sunset-viewpoint.webp",
-    "/brand/v2/photos/gallery/concert-friends.webp",
-  ],
+  capa: ["/brand/v2/photos/murals/birthday-party.webp"],
 };
 
 function matchesSearch(definition: TemplateDefinition, searchQuery: string): boolean {
@@ -377,9 +375,18 @@ export function TemplateCatalog({
       )}
 
       <main className="template-main">
+        <a className="meu-niver-entry" href="/templates/meu-niver" aria-label="Abrir Meu Niver 3D">
+          <img src="/brand/v2/templates/meu-niver-cover.webp" alt="" />
+          <span className="meu-niver-entry-copy">
+            <span className="eyebrow">cena 3D</span>
+            <strong>Meu Niver</strong>
+            <span>Fotos em profundidade. Toque aproxima uma foto.</span>
+          </span>
+          <span className="meu-niver-entry-action">abrir cena</span>
+        </a>
         <section className="template-intro" aria-labelledby="template-page-title">
           <div className="template-intro-copy">
-            <p className="eyebrow template-desktop-eyebrow">04 · Templates</p>
+            <p className="eyebrow template-desktop-eyebrow">Templates</p>
             <h1 id="template-page-title" aria-label="Templates: escolha seu mood">
               <span className="template-title-mobile" aria-hidden="true">
                 escolhe<br />o <span className="template-title-accent">mood</span>

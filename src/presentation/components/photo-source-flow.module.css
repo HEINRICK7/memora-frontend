@@ -1,16 +1,17 @@
+/* Hallmark · genre: playful · macrostructure: Workbench · design-system: design.md · designed-as-app */
 .flow {
   min-height: 100vh;
   min-height: 100svh;
   display: flex;
   flex-direction: column;
-  padding: 0 max(16px, env(safe-area-inset-left)) calc(18px + env(safe-area-inset-bottom));
+  padding: 0 max(var(--space-sm), env(safe-area-inset-left)) calc(var(--space-lg) + env(safe-area-inset-bottom));
   background: var(--color-paper);
   color: var(--color-ink);
 }
 
 .header {
-  width: min(100%, 1100px);
-  min-height: 68px;
+  width: min(100%, 1120px);
+  min-height: 70px;
   display: grid;
   grid-template-columns: minmax(76px, 1fr) auto minmax(76px, 1fr);
   align-items: center;
@@ -23,15 +24,24 @@
   min-height: 44px;
   display: inline-flex;
   align-items: center;
+  padding: 0 var(--space-2xs);
+  border-radius: var(--radius-sm);
   color: var(--color-ink);
-  font-size: 14px;
+  font-size: var(--text-sm);
   font-weight: 600;
   text-decoration: none;
+  white-space: nowrap;
+  transition: background-color var(--dur-micro) var(--ease-out), color var(--dur-micro) var(--ease-out);
+}
+
+@media (hover: hover) {
+  .headerAction:hover {
+    background: var(--color-paper-2);
+  }
 }
 
 button.headerAction {
   justify-content: flex-start;
-  padding: 0;
   border: 0;
   background: transparent;
   cursor: pointer;
@@ -39,7 +49,8 @@ button.headerAction {
 
 .headerAction:first-child {
   justify-self: start;
-  font-size: 30px;
+  justify-content: center;
+  font-size: 28px;
   line-height: 1;
 }
 
@@ -48,16 +59,18 @@ button.headerAction {
 }
 
 .brand {
+  min-height: 44px;
   display: inline-flex;
+  align-items: center;
   justify-content: center;
   color: inherit;
   text-decoration: none;
 }
 
 .brand :global(.brand-monogram) {
-  width: 26px;
-  height: 26px;
-  border-radius: 7px;
+  width: 28px;
+  height: 28px;
+  border-radius: var(--radius-xs);
 }
 
 .brand :global(.brand-wordmark) {
@@ -76,87 +89,99 @@ button.headerAction {
 
 .content,
 .cameraContent {
-  width: min(100%, 720px);
+  width: min(100%, 780px);
   flex: 1;
   display: flex;
   flex-direction: column;
   align-self: center;
-  padding: 26px 0 0;
+  padding: var(--space-lg) 0 0;
 }
 
 .eyebrow {
-  margin: 0 0 6px;
+  margin: 0 0 var(--space-2xs);
   color: var(--color-muted);
   font-family: var(--font-body);
-  font-size: 12px;
+  font-size: var(--text-xs);
   font-weight: 700;
-  letter-spacing: 0.07em;
+  letter-spacing: 0.08em;
   line-height: 1.4;
   text-transform: uppercase;
 }
 
 .title,
 .cameraTitle {
-  max-width: 15ch;
+  max-width: 16ch;
   margin: 0;
   font-family: var(--font-display);
-  font-size: clamp(2.45rem, 9vw, 4.25rem);
+  font-size: clamp(2.25rem, 8.2vw, 3.85rem);
   font-weight: 700;
-  letter-spacing: -0.065em;
-  line-height: 0.99;
+  font-style: normal;
+  letter-spacing: -0.055em;
+  line-height: 0.98;
+  overflow-wrap: anywhere;
 }
 
 .title::after {
-  width: 76px;
-  height: 6px;
+  width: 56px;
+  height: 5px;
   display: block;
-  margin: 9px 0 0 106px;
-  border-radius: 999px;
+  margin: var(--space-xs) 0 0;
+  border-radius: var(--radius-pill);
   background: var(--color-lime);
   content: "";
-  transform: rotate(-4deg);
 }
 
 .sourceList {
   min-width: 0;
-  margin: 24px 0 0;
+  margin: var(--space-lg) 0 var(--space-lg);
   padding: 0;
   border: 0;
 }
 
 .radioGroup {
   display: grid;
-  gap: 12px;
+  gap: var(--space-xs);
 }
 
 .sourceCard {
   position: relative;
-  min-height: 126px;
+  min-height: 118px;
   display: grid;
   grid-template-columns: 92px minmax(0, 1fr) 28px;
   align-items: center;
-  gap: 13px;
-  padding: 9px 13px 9px 10px;
+  gap: var(--space-sm);
+  padding: 10px 14px 10px 10px;
   overflow: hidden;
-  border: 1px solid transparent;
-  border-radius: 17px;
-  background: var(--color-white);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  background: var(--color-surface);
   cursor: pointer;
-  transition: border-color 140ms ease, background 140ms ease, transform 140ms ease;
+  transition:
+    border-color var(--dur-micro) var(--ease-out),
+    background-color var(--dur-micro) var(--ease-out),
+    transform var(--dur-micro) var(--ease-out);
+}
+
+@media (hover: hover) {
+  .sourceCard:hover:not(.sourceDisabled) {
+    border-color: var(--color-rule-2);
+    transform: translateY(-2px);
+  }
 }
 
 .sourceCard:has(input:checked) {
-  background: #eff8cf;
-  border-color: #e6f7ad;
+  background: var(--color-lime-soft);
+  border-color: var(--color-ink);
+  box-shadow: inset 0 0 0 1px var(--color-ink);
 }
 
 .sourceCard:has(input:focus-visible) {
-  outline: 3px solid var(--color-cobalt);
+  outline: 3px solid var(--color-focus);
   outline-offset: 3px;
 }
 
 .sourceCard:active:not(.sourceDisabled) {
-  transform: scale(0.99);
+  transform: translateY(1px);
 }
 
 .sourceCard input {
@@ -167,57 +192,59 @@ button.headerAction {
 }
 
 .sourceImage {
-  width: 100px;
-  height: 88px;
-  border-radius: 11px;
+  width: 92px;
+  height: 86px;
+  border-radius: var(--radius-sm);
   object-fit: cover;
-  transform: rotate(-3deg);
+  transform: rotate(-2deg);
 }
 
 .sourceCopy {
   min-width: 0;
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: var(--space-3xs);
 }
 
 .sourceTitle {
   font-family: var(--font-display);
-  font-size: clamp(17px, 5vw, 21px);
+  font-size: clamp(17px, 4.6vw, 20px);
   font-weight: 700;
-  letter-spacing: -0.04em;
-  line-height: 1.05;
+  letter-spacing: -0.035em;
+  line-height: 1.1;
   text-transform: lowercase;
 }
 
 .sourceDescription {
-  max-width: 20ch;
+  max-width: 24ch;
   color: var(--color-muted);
   font-size: 13px;
-  line-height: 1.25;
+  line-height: 1.35;
 }
 
 .sourceArrow {
   justify-self: end;
   font-family: var(--font-display);
-  font-size: 29px;
+  font-size: 26px;
   font-weight: 600;
   line-height: 1;
 }
 
 .sourceDisabled {
-  color: #777d80;
-  background: #f0f0ed;
+  border-color: var(--color-border);
+  color: var(--color-disabled-foreground);
+  background: var(--color-surface-disabled);
   cursor: not-allowed;
+  opacity: 0.82;
 }
 
 .sourceDisabled .sourceTitle,
 .sourceDisabled .sourceArrow {
-  color: #51585d;
+  color: var(--color-disabled-foreground);
 }
 
 .sourceDisabled .sourceDescription {
-  color: #4e565c;
+  color: var(--color-muted);
 }
 
 .googleMark {
@@ -226,38 +253,44 @@ button.headerAction {
   display: grid;
   place-items: center;
   justify-self: center;
-  color: #7a8590;
-  font-size: 39px;
+  color: var(--color-muted);
+  font-size: 36px;
   line-height: 1;
 }
 
 .primaryAction {
   width: 100%;
-  min-height: 56px;
+  min-height: 54px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 12px;
-  padding: 12px 20px;
+  gap: var(--space-xs);
+  padding: var(--space-xs) var(--space-md);
   border: 0;
-  border-radius: 999px;
+  border-radius: var(--radius-pill);
   background: var(--color-lime);
   color: var(--color-ink);
   font-family: var(--font-display);
-  font-size: 18px;
+  font-size: 17px;
   font-weight: 700;
-  letter-spacing: -0.03em;
+  letter-spacing: -0.025em;
   text-transform: lowercase;
+  white-space: nowrap;
   cursor: pointer;
-  transition: background 140ms ease, transform 140ms ease;
+  transition:
+    background-color var(--dur-micro) var(--ease-out),
+    transform var(--dur-micro) var(--ease-out);
 }
 
-.primaryAction:hover:not(:disabled) {
-  background: var(--color-hover);
+@media (hover: hover) {
+  .primaryAction:hover:not(:disabled) {
+    background: var(--color-hover);
+    transform: translateY(-1px);
+  }
 }
 
 .primaryAction:active:not(:disabled) {
-  transform: scale(0.99);
+  transform: translateY(1px);
 }
 
 .primaryAction:disabled,
@@ -266,23 +299,26 @@ button.headerAction {
   color: var(--color-disabled-foreground);
   background: var(--color-disabled-background);
   cursor: not-allowed;
+  opacity: 0.72;
 }
 
 .helper {
-  margin: 10px 0 0;
+  margin: var(--space-xs) 0 0;
   color: var(--color-muted);
-  font-size: 12px;
+  font-size: 13px;
   line-height: 1.45;
   text-align: center;
 }
 
 .notice {
-  margin: 13px 0 0;
-  padding: 10px 12px;
-  border-radius: 10px;
+  margin: 0 0 var(--space-sm);
+  padding: var(--space-xs) var(--space-sm);
+  border: 1px solid var(--color-error);
+  border-radius: var(--radius-sm);
   background: var(--color-error-soft);
   color: var(--color-error);
-  font-size: 14px;
+  font-size: var(--text-sm);
+  font-weight: 600;
   line-height: 1.45;
 }
 
@@ -291,19 +327,31 @@ button.headerAction {
   display: flex;
   align-items: center;
   justify-content: flex-end;
-  gap: 12px;
-  margin: 10px 0 4px;
+  gap: var(--space-xs);
+  margin: var(--space-sm) 0 var(--space-2xs);
 }
 
 .selectionBar button,
 .addAction {
   min-height: 44px;
+  padding: 0 var(--space-xs);
   border: 0;
+  border-radius: var(--radius-sm);
   background: transparent;
-  color: #2945e9;
-  font-size: 14px;
+  color: var(--color-cobalt-strong);
+  font-size: var(--text-sm);
   font-weight: 700;
+  white-space: nowrap;
   cursor: pointer;
+  transition: background-color var(--dur-micro) var(--ease-out);
+}
+
+@media (hover: hover) {
+  .selectionBar button:hover:not(:disabled),
+  .addAction:hover:not(:disabled),
+  .selectedTrayHeader button:hover:not(:disabled) {
+    background: var(--color-paper-2);
+  }
 }
 
 .selectedTrayHeader button:disabled {
@@ -314,9 +362,9 @@ button.headerAction {
 .photoGrid {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 7px;
+  gap: var(--space-2xs);
   margin: 0;
-  padding: 0 0 8px;
+  padding: 0 0 var(--space-2xs);
   overflow: auto;
   list-style: none;
 }
@@ -326,8 +374,8 @@ button.headerAction {
   min-width: 0;
   aspect-ratio: 1 / 1;
   overflow: hidden;
-  border-radius: 10px;
-  background: #e4e5df;
+  border-radius: var(--radius-sm);
+  background: var(--color-paper-3);
 }
 
 .photoTile img {
@@ -339,19 +387,36 @@ button.headerAction {
 
 .removePhoto {
   position: absolute;
-  top: 6px;
-  right: 6px;
-  width: 30px;
-  height: 30px;
+  top: 2px;
+  right: 2px;
+  width: 44px;
+  height: 44px;
   display: grid;
   place-items: center;
   border: 0;
-  border-radius: 50%;
-  background: var(--color-white);
+  border-radius: var(--radius-pill);
+  background: transparent;
   color: var(--color-ink);
-  font-size: 22px;
+  font-size: 20px;
   line-height: 1;
   cursor: pointer;
+}
+
+.removePhoto::before {
+  position: absolute;
+  z-index: -1;
+  inset: 7px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-pill);
+  background: var(--color-white);
+  content: "";
+  transition: background-color var(--dur-micro) var(--ease-out);
+}
+
+@media (hover: hover) {
+  .removePhoto:hover:not(:disabled)::before {
+    background: var(--color-paper-2);
+  }
 }
 
 .removePhoto:disabled {
@@ -361,14 +426,15 @@ button.headerAction {
 
 .savingTag {
   position: absolute;
-  right: 5px;
-  bottom: 5px;
-  left: 5px;
+  right: 6px;
+  bottom: 6px;
+  left: 6px;
   padding: 4px 6px;
-  border-radius: 6px;
-  background: rgb(25 29 32 / 78%);
-  color: white;
+  border-radius: var(--radius-xs);
+  background: var(--color-scrim-strong);
+  color: var(--color-white);
   font-size: 11px;
+  font-weight: 600;
   text-align: center;
 }
 
@@ -377,10 +443,11 @@ button.headerAction {
   display: grid;
   align-content: center;
   justify-items: center;
-  gap: 7px;
-  padding: 20px;
-  border: 1px dashed var(--color-border);
-  border-radius: 15px;
+  gap: var(--space-2xs);
+  padding: var(--space-md);
+  border: 1px dashed var(--color-rule-2);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
   color: var(--color-muted);
   text-align: center;
 }
@@ -391,50 +458,54 @@ button.headerAction {
 
 .selectedTray {
   margin-top: auto;
-  padding-top: 8px;
+  padding-top: var(--space-sm);
 }
 
 .selectedTrayHeader {
-  min-height: 38px;
+  min-height: 44px;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 12px;
+  gap: var(--space-xs);
 }
 
 .selectedTrayHeader p {
   margin: 0;
-  font-size: 13px;
+  font-size: var(--text-sm);
   font-weight: 700;
+  font-variant-numeric: tabular-nums;
 }
 
 .selectedTrayHeader button {
   min-height: 44px;
+  padding: 0 var(--space-2xs);
   border: 0;
+  border-radius: var(--radius-sm);
   background: transparent;
-  color: #2945e9;
-  font-size: 14px;
+  color: var(--color-cobalt-strong);
+  font-size: var(--text-sm);
   font-weight: 700;
+  white-space: nowrap;
   cursor: pointer;
 }
 
 .selectedStrip {
   display: flex;
-  gap: 4px;
-  margin: 2px 0 0;
+  gap: var(--space-3xs);
+  margin: var(--space-3xs) 0 var(--space-xs);
   padding: 0;
   overflow-x: auto;
   list-style: none;
 }
 
 .selectedStrip li {
-  min-width: 30px;
-  max-width: 42px;
+  min-width: 36px;
+  max-width: 46px;
   flex: 1 1 0;
   aspect-ratio: 1 / 1;
   overflow: hidden;
-  border-radius: 6px;
-  background: #e4e5df;
+  border-radius: var(--radius-xs);
+  background: var(--color-paper-3);
 }
 
 .selectedStrip img {
@@ -446,8 +517,8 @@ button.headerAction {
 
 .selectionActions {
   display: grid;
-  margin-top: 0;
-  padding-top: 6px;
+  margin-top: var(--space-2xs);
+  padding-top: var(--space-2xs);
 }
 
 .addAction {
@@ -455,22 +526,22 @@ button.headerAction {
 }
 
 .cameraContent {
-  gap: 12px;
+  gap: var(--space-sm);
 }
 
 .cameraTitle {
-  font-size: clamp(2.25rem, 8vw, 3.4rem);
+  font-size: clamp(2.1rem, 7.5vw, 3.25rem);
 }
 
 .cameraViewport {
   position: relative;
-  min-height: min(57vh, 510px);
+  min-height: min(56svh, 500px);
   display: grid;
   place-items: center;
   overflow: hidden;
-  border-radius: 20px;
-  background: #161819;
-  color: white;
+  border-radius: var(--radius-lg);
+  background: var(--color-editor-surface-deep);
+  color: var(--color-white);
 }
 
 .cameraViewport video {
@@ -483,24 +554,37 @@ button.headerAction {
 
 .cameraViewport p {
   position: relative;
-  z-index: 1;
+  z-index: var(--z-base);
 }
 
 .cameraActions {
   display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 10px;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: var(--space-xs);
   margin-top: auto;
 }
 
 .secondaryAction {
   min-height: 54px;
-  border: 1px solid var(--color-border);
-  border-radius: 999px;
-  background: var(--color-white);
+  padding: 0 var(--space-md);
+  border: 1px solid var(--color-ink);
+  border-radius: var(--radius-pill);
+  background: var(--color-surface);
   color: var(--color-ink);
   font-weight: 700;
+  white-space: nowrap;
   cursor: pointer;
+  transition: background-color var(--dur-micro) var(--ease-out), transform var(--dur-micro) var(--ease-out);
+}
+
+@media (hover: hover) {
+  .secondaryAction:hover:not(:disabled) {
+    background: var(--color-paper-2);
+  }
+}
+
+.secondaryAction:active:not(:disabled) {
+  transform: translateY(1px);
 }
 
 .visuallyHidden {
@@ -514,40 +598,42 @@ button.headerAction {
 
 @media (min-width: 700px) {
   .flow {
-    padding-right: max(32px, env(safe-area-inset-right));
-    padding-left: max(32px, env(safe-area-inset-left));
+    padding-right: max(var(--space-lg), env(safe-area-inset-right));
+    padding-left: max(var(--space-lg), env(safe-area-inset-left));
   }
 
   .header {
-    min-height: 78px;
+    min-height: 76px;
   }
 
   .content,
   .cameraContent {
-    padding-top: 42px;
+    padding-top: var(--space-xl);
   }
 
   .radioGroup {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
+    grid-template-columns: 1.15fr 0.85fr 1.1fr;
     align-items: stretch;
+    gap: var(--space-sm);
   }
 
   .sourceCard {
-    min-height: 185px;
+    min-height: 212px;
     grid-template-columns: minmax(0, 1fr) auto;
-    grid-template-rows: 1fr auto;
-    align-content: center;
-    gap: 8px 6px;
-    padding: 13px;
+    grid-template-rows: 112px auto;
+    align-content: start;
+    gap: var(--space-xs) var(--space-2xs);
+    padding: 14px;
   }
 
   .sourceImage,
   .googleMark {
     width: 100%;
-    height: 92px;
+    height: 112px;
     grid-column: 1 / -1;
     justify-self: stretch;
     object-fit: cover;
+    transform: none;
   }
 
   .sourceCopy {
@@ -555,43 +641,55 @@ button.headerAction {
   }
 
   .sourceTitle {
-    font-size: 18px;
+    font-size: 19px;
   }
 
   .sourceDescription {
-    font-size: 12px;
+    font-size: 13px;
   }
 
   .sourceArrow {
     grid-column: 2;
     grid-row: 2;
+    align-self: end;
   }
 
   .sourceDisabled {
     align-items: center;
-    align-content: center;
+    align-content: start;
   }
 
   .sourceDisabled .googleMark {
     place-self: center;
     width: 100%;
-    height: 92px;
+    height: 112px;
   }
 
   .primaryAction {
-    min-height: 60px;
-    font-size: 20px;
+    width: auto;
+    min-width: 240px;
+    min-height: 56px;
+    align-self: flex-start;
+    padding-inline: var(--space-xl);
+    font-size: 18px;
+  }
+
+  .helper {
+    text-align: left;
   }
 
   .photoGrid {
     grid-template-columns: repeat(4, minmax(0, 1fr));
-    gap: 10px;
+    gap: var(--space-xs);
   }
 }
 
 @media (prefers-reduced-motion: reduce) {
   .sourceCard,
-  .primaryAction {
+  .primaryAction,
+  .secondaryAction,
+  .headerAction,
+  .removePhoto::before {
     transition: none;
   }
 }

@@ -1,5 +1,6 @@
 import { PhotoLibrary } from "../../presentation/components/photo-library";
+import { AdminGate } from "../../presentation/components/admin-gate";
 
 export default function PhotoLibraryPage() {
-  return <PhotoLibrary />;
+  return <AdminGate><PhotoLibrary /></AdminGate>;
 }

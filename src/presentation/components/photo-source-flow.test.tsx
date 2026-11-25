@@ -80,7 +80,7 @@ describe("PhotoSourceFlow (FE-PS-AC01..12)", () => {
       "src",
       "blob:local-preview-1",
     );
-    expect(screen.getByText(/escolha arquivos JPEG ou PNG/i)).toBeInTheDocument();
+    expect(screen.getByText(/escolha arquivos JPEG, PNG/i)).toBeInTheDocument();
     expect(screen.getByText(/arquivo está vazio/i)).toBeInTheDocument();
     expect(screen.getByText("1 foto selecionada")).toBeInTheDocument();
     expect(gateway.createUploadIntent).not.toHaveBeenCalled();

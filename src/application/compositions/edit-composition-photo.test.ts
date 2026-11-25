@@ -8,7 +8,7 @@ const draft = () => ({
   createdAt: "2026-10-24T15:30:00.000Z",
   updatedAt: "2026-10-24T15:30:00.000Z",
   document: createCompositionDocument(
-    TEMPLATE_CATALOG_V1.find((item) => item.templateId === "duo-side-by-side")!,
+    TEMPLATE_CATALOG_V1.find((item) => item.templateId === "vibes")!,
   ),
 });
 

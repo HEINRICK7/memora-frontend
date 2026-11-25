@@ -25,7 +25,7 @@ Arquivo public/telas/image4.png, painel superior: título/capa na faixa inicial,
 ## Interactions, states and navigation
 
 - A página solicita somente GET compartilhado sem autenticação; nenhuma chamada de mutação ocorre por conhecer o token VIEW.
-- Botão de contribuição não aparece para canContribute false. Se um futuro grant real retornar true, a rota de upload segue o contrato de contribuição e as imagens aguardam aprovação; o frontend não publica contribuição diretamente.
+- Botão de contribuição não aparece para `canContribute: false`. Para grants reais `CONTRIBUTE`, o QR abre boas-vindas; cada convidado tem álbum privado e publica apenas as fotos que selecionar. O anfitrião não aprova contribuições.
 - Novo GET renova previews perto/depois de previewExpiresAt; a URL anterior não é persistida nem registrada.
 - Estados: loading, view ready, atualização de preview, falha temporária e estados de link/mural indisponível. Nenhum erro revela metadata privada.
 
