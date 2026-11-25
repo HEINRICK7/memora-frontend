@@ -1,8 +1,8 @@
 import { needsClientConversion } from "../domain/photos/validate-photo";
 
-const MAX_UPLOAD_SIDE = 2560;
-const OPTIMIZE_SIZE_THRESHOLD_BYTES = 3 * 1024 * 1024;
-const DEFAULT_JPEG_QUALITY = 0.88;
+const MAX_UPLOAD_SIDE = 2048;
+const OPTIMIZE_SIZE_THRESHOLD_BYTES = 600 * 1024;
+const DEFAULT_JPEG_QUALITY = 0.85;
 
 type DecodedBitmap = {
   width: number;
@@ -12,6 +12,7 @@ type DecodedBitmap = {
 
 export type ImageOptimizerDependencies = {
   decodeBitmap?: ((file: File) => Promise<DecodedBitmap>) | null;
+  detectTransparency?: (bitmap: DecodedBitmap) => Promise<boolean>;
   encodeCanvas?: (
     width: number,
     height: number,
@@ -33,6 +34,46 @@ async function defaultDecodeBitmap(file: File): Promise<DecodedBitmap> {
   return globalThis.createImageBitmap(file, { imageOrientation: "from-image" });
 }
 
+async function defaultDetectTransparency(bitmap: DecodedBitmap): Promise<boolean> {
+  const probeMax = 256;
+  const scale = Math.min(1, probeMax / Math.max(bitmap.width, bitmap.height));
+  const width = Math.max(1, Math.round(bitmap.width * scale));
+  const height = Math.max(1, Math.round(bitmap.height * scale));
+
+  try {
+    if (typeof OffscreenCanvas !== "undefined") {
+      const canvas = new OffscreenCanvas(width, height);
+      const ctx = canvas.getContext("2d", { willReadFrequently: true });
+      if (!ctx) return true;
+      ctx.drawImage(bitmap as unknown as CanvasImageSource, 0, 0, width, height);
+      const { data } = ctx.getImageData(0, 0, width, height);
+      for (let i = 3; i < data.length; i += 4) {
+        if (data[i] < 250) return true;
+      }
+      return false;
+    }
+    if (typeof document === "undefined") return true;
+    const canvas = document.createElement("canvas");
+    canvas.width = width;
+    canvas.height = height;
+    try {
+      const ctx = canvas.getContext("2d", { willReadFrequently: true });
+      if (!ctx) return true;
+      ctx.drawImage(bitmap as unknown as CanvasImageSource, 0, 0, width, height);
+      const { data } = ctx.getImageData(0, 0, width, height);
+      for (let i = 3; i < data.length; i += 4) {
+        if (data[i] < 250) return true;
+      }
+      return false;
+    } finally {
+      canvas.width = 0;
+      canvas.height = 0;
+    }
+  } catch {
+    return true;
+  }
+}
+
 async function defaultEncodeCanvas(
   width: number,
   height: number,
@@ -44,6 +85,10 @@ async function defaultEncodeCanvas(
     const canvas = new OffscreenCanvas(width, height);
     const ctx = canvas.getContext("2d");
     if (!ctx) return null;
+    if (mimeType === "image/jpeg") {
+      ctx.fillStyle = "#ffffff";
+      ctx.fillRect(0, 0, width, height);
+    }
     ctx.imageSmoothingEnabled = true;
     ctx.imageSmoothingQuality = "high";
     ctx.drawImage(bitmap as unknown as CanvasImageSource, 0, 0, width, height);
@@ -56,6 +101,10 @@ async function defaultEncodeCanvas(
   try {
     const ctx = canvas.getContext("2d");
     if (!ctx) return null;
+    if (mimeType === "image/jpeg") {
+      ctx.fillStyle = "#ffffff";
+      ctx.fillRect(0, 0, width, height);
+    }
     ctx.imageSmoothingEnabled = true;
     ctx.imageSmoothingQuality = "high";
     ctx.drawImage(bitmap as unknown as CanvasImageSource, 0, 0, width, height);
@@ -102,15 +151,26 @@ export async function optimizePhotoForUpload(
     const shouldResize = longest > MAX_UPLOAD_SIDE;
     const shouldCompress = file.size > OPTIMIZE_SIZE_THRESHOLD_BYTES;
 
-    if (!mustConvert && !shouldResize && !shouldCompress) {
+    let targetMime: "image/jpeg" | "image/png" = "image/jpeg";
+    let convertedOpaquePng = false;
+    if (file.type === "image/png" && !mustConvert) {
+      const detectTransparency = dependencies.detectTransparency ?? defaultDetectTransparency;
+      const hasTransparency = await detectTransparency(bitmap);
+      if (hasTransparency) {
+        targetMime = "image/png";
+      } else {
+        targetMime = "image/jpeg";
+        convertedOpaquePng = true;
+      }
+    }
+
+    if (!mustConvert && !shouldResize && !shouldCompress && !convertedOpaquePng) {
       return file;
     }
 
     const scale = shouldResize ? MAX_UPLOAD_SIDE / longest : 1;
     const targetWidth = Math.max(1, Math.round(bitmap.width * scale));
     const targetHeight = Math.max(1, Math.round(bitmap.height * scale));
-    const targetMime: "image/jpeg" | "image/png" =
-      file.type === "image/png" && !mustConvert ? "image/png" : "image/jpeg";
 
     const encodeCanvas = dependencies.encodeCanvas ?? defaultEncodeCanvas;
     const blob = await encodeCanvas(targetWidth, targetHeight, targetMime, DEFAULT_JPEG_QUALITY, bitmap);
@@ -121,12 +181,13 @@ export async function optimizePhotoForUpload(
       return file;
     }
 
-    // If re-encoding a JPEG/PNG didn't shrink and didn't resize, keep the original untouched.
+    // If re-encoding didn't shrink and didn't resize/require conversion, keep the original untouched.
     if (!mustConvert && !shouldResize && blob.size >= file.size) {
       return file;
     }
 
-    const nextName = mustConvert
+    const extensionChanged = mustConvert || convertedOpaquePng;
+    const nextName = extensionChanged
       ? renameExtension(file.name, targetMime === "image/png" ? ".png" : ".jpg")
       : file.name;
     return new File([blob], nextName, { type: targetMime, lastModified: file.lastModified });
