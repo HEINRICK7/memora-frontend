@@ -68,11 +68,27 @@ export function createQrDesignSvg(value: string, design: QrDesign, width = 512, 
   const codeColor = safeColor(design.codeColor, "#191d20");
   const cornerColor = safeColor(design.cornerColor, codeColor);
   const backgroundColor = safeColor(design.backgroundColor, "#ffffff");
+  const hasLogo = Boolean(design.showLogo && design.logoDataUrl);
+  const clampedScale = Math.max(0.16, Math.min(0.34, design.logoScale || 0.26));
+  const logoSize = Math.max(6, Math.min(size * 0.34, size * clampedScale));
+  const logoLeft = (size - logoSize) / 2;
+  const logoTop = (size - logoSize) / 2;
+  const badgePad = 0.35;
+  const badgeLeft = logoLeft - badgePad;
+  const badgeTop = logoTop - badgePad;
+  const badgeSize = logoSize + badgePad * 2;
+  const badgeRight = badgeLeft + badgeSize;
+  const badgeBottom = badgeTop + badgeSize;
+  const badgeFill = design.transparentBackground ? "#ffffff" : backgroundColor;
+
   const cells: string[] = [];
 
   for (let row = 0; row < size; row += 1) {
     for (let col = 0; col < size; col += 1) {
       if (!qr.modules.get(row, col) || isFinderModule(row, col, size)) continue;
+      if (hasLogo && col + 1 > badgeLeft && col < badgeRight && row + 1 > badgeTop && row < badgeBottom) {
+        continue;
+      }
       cells.push(shape(col, row, 1, design.dotStyle, codeColor));
     }
   }
@@ -83,12 +99,9 @@ export function createQrDesignSvg(value: string, design: QrDesign, width = 512, 
     finder(0, size - 7, design.cornerStyle, cornerColor),
   ].join("");
 
-  const logoSize = Math.max(5, Math.min(size * 0.28, size * design.logoScale));
-  const logoLeft = (size - logoSize) / 2;
-  const logoTop = (size - logoSize) / 2;
-  const logoMarkup = design.showLogo && design.logoDataUrl
+  const logoMarkup = hasLogo && design.logoDataUrl
     ? [
-        `<rect x="${logoLeft - 0.7}" y="${logoTop - 0.7}" width="${logoSize + 1.4}" height="${logoSize + 1.4}" rx="1.5" fill="#ffffff"/>`,
+        `<rect data-qr-logo-frame="true" x="${badgeLeft}" y="${badgeTop}" width="${badgeSize}" height="${badgeSize}" rx="1.2" fill="${badgeFill}"/>`,
         `<image x="${logoLeft}" y="${logoTop}" width="${logoSize}" height="${logoSize}" href="${design.logoDataUrl}" preserveAspectRatio="xMidYMid meet"/>`,
       ].join("")
     : "";

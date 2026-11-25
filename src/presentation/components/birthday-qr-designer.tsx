@@ -24,7 +24,7 @@ const DEFAULT_DESIGN: QrDesign = {
   margin: 4,
   logoDataUrl: null,
   showLogo: true,
-  logoScale: 0.2,
+  logoScale: 0.26,
   caption: "Escaneie para enviar suas fotos",
 };
 
@@ -87,7 +87,7 @@ function restoreDesign(muralId: string): QrDesign {
         : null,
       caption: typeof parsed.caption === "string" ? parsed.caption.slice(0, 48) : DEFAULT_DESIGN.caption,
       margin: typeof parsed.margin === "number" ? Math.max(0, Math.min(8, parsed.margin)) : DEFAULT_DESIGN.margin,
-      logoScale: typeof parsed.logoScale === "number" ? Math.max(0.12, Math.min(0.28, parsed.logoScale)) : DEFAULT_DESIGN.logoScale,
+      logoScale: typeof parsed.logoScale === "number" ? Math.max(0.16, Math.min(0.34, parsed.logoScale)) : DEFAULT_DESIGN.logoScale,
     };
   } catch {
     return DEFAULT_DESIGN;
@@ -134,6 +134,68 @@ function downloadBlob(blob: Blob, filename: string) {
   window.setTimeout(() => URL.revokeObjectURL(objectUrl), 1000);
 }
 
+function detectTightLogoBounds(
+  image: HTMLImageElement,
+): { sx: number; sy: number; sw: number; sh: number } {
+  const fallback = { sx: 0, sy: 0, sw: image.width, sh: image.height };
+  try {
+    const probeMax = 512;
+    const probeScale = Math.min(1, probeMax / Math.max(image.width, image.height));
+    const pw = Math.max(1, Math.round(image.width * probeScale));
+    const ph = Math.max(1, Math.round(image.height * probeScale));
+    const probe = document.createElement("canvas");
+    probe.width = pw;
+    probe.height = ph;
+    const ctx = probe.getContext("2d", { willReadFrequently: true });
+    if (!ctx) return fallback;
+    ctx.drawImage(image, 0, 0, pw, ph);
+    const { data } = ctx.getImageData(0, 0, pw, ph);
+
+    const cornerIndices = [
+      0,
+      (pw - 1) * 4,
+      (ph - 1) * pw * 4,
+      ((ph - 1) * pw + (pw - 1)) * 4,
+    ];
+    const hasTransparentCorner = cornerIndices.some((i) => data[i + 3] < 240);
+    const hasNearWhiteCorners = !hasTransparentCorner
+      && cornerIndices.every((i) => data[i] >= 242 && data[i + 1] >= 242 && data[i + 2] >= 242);
+
+    let minX = pw;
+    let minY = ph;
+    let maxX = -1;
+    let maxY = -1;
+
+    for (let y = 0; y < ph; y += 1) {
+      for (let x = 0; x < pw; x += 1) {
+        const i = (y * pw + x) * 4;
+        const alpha = data[i + 3];
+        if (alpha <= 16) continue;
+        if (hasNearWhiteCorners && data[i] >= 244 && data[i + 1] >= 244 && data[i + 2] >= 244) {
+          continue;
+        }
+        if (x < minX) minX = x;
+        if (x > maxX) maxX = x;
+        if (y < minY) minY = y;
+        if (y > maxY) maxY = y;
+      }
+    }
+
+    if (maxX <= minX || maxY <= minY) return fallback;
+
+    const sx = Math.max(0, Math.floor(minX / probeScale));
+    const sy = Math.max(0, Math.floor(minY / probeScale));
+    const ex = Math.min(image.width, Math.ceil((maxX + 1) / probeScale));
+    const ey = Math.min(image.height, Math.ceil((maxY + 1) / probeScale));
+    const sw = ex - sx;
+    const sh = ey - sy;
+    if (sw < 8 || sh < 8) return fallback;
+    return { sx, sy, sw, sh };
+  } catch {
+    return fallback;
+  }
+}
+
 function prepareLogo(file: File): Promise<string> {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
@@ -142,18 +204,33 @@ function prepareLogo(file: File): Promise<string> {
       const image = new Image();
       image.onerror = () => reject(new Error("Escolha uma imagem PNG, JPEG ou WebP válida."));
       image.onload = () => {
+        const outSize = 512;
+        const innerSize = 492;
         const canvas = document.createElement("canvas");
-        canvas.width = 256;
-        canvas.height = 256;
+        canvas.width = outSize;
+        canvas.height = outSize;
         const context = canvas.getContext("2d");
         if (!context) {
           reject(new Error("Não foi possível preparar o logo."));
           return;
         }
-        const scale = Math.min(216 / image.width, 216 / image.height);
-        const width = image.width * scale;
-        const height = image.height * scale;
-        context.drawImage(image, (256 - width) / 2, (256 - height) / 2, width, height);
+        const bounds = detectTightLogoBounds(image);
+        const scale = Math.min(innerSize / bounds.sw, innerSize / bounds.sh);
+        const width = bounds.sw * scale;
+        const height = bounds.sh * scale;
+        context.imageSmoothingEnabled = true;
+        context.imageSmoothingQuality = "high";
+        context.drawImage(
+          image,
+          bounds.sx,
+          bounds.sy,
+          bounds.sw,
+          bounds.sh,
+          (outSize - width) / 2,
+          (outSize - height) / 2,
+          width,
+          height,
+        );
         resolve(canvas.toDataURL("image/png"));
       };
       image.src = String(reader.result);
@@ -432,7 +509,7 @@ export function BirthdayQrDesigner({ muralId, eventName, shareUrl }: BirthdayQrD
             </label>
             <label className={styles.rangeRow}>
               <span>Tamanho do logo</span>
-              <input aria-label="Tamanho do logo" type="range" min={12} max={28} step={2} disabled={!design.logoDataUrl || !design.showLogo} value={Math.round(design.logoScale * 100)} onChange={(event) => updateDesign({ logoScale: Number(event.target.value) / 100 })} />
+              <input aria-label="Tamanho do logo" type="range" min={16} max={34} step={2} disabled={!design.logoDataUrl || !design.showLogo} value={Math.round(design.logoScale * 100)} onChange={(event) => updateDesign({ logoScale: Number(event.target.value) / 100 })} />
               <span className={styles.rangeValue}>{Math.round(design.logoScale * 100)}%</span>
             </label>
           </section>

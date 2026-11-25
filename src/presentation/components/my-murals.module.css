@@ -1,4 +1,8 @@
 /* Hallmark · genre: playful · macrostructure: Portfolio Grid · design-system: design.md · designed-as-app */
+.createMode {
+  position: relative;
+}
+
 .muralCollection :global(.mural-card-cover) {
   position: relative;
   width: 92px;
@@ -121,8 +125,13 @@
     color: var(--color-cobalt);
   }
 
-  .muralCollection :global(.mural-create-panel) {
+  .muralCollection:not(.createMode) :global(.mural-create-panel) {
     display: none;
+  }
+
+  .muralCollection.createMode :global(.mural-create-panel) {
+    display: block;
+    margin-bottom: var(--space-md);
   }
 
   .muralCollection :global(.mural-list-section) {

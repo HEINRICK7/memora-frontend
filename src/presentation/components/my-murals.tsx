@@ -34,6 +34,7 @@ type StatusFilter = "ALL" | MuralStatus;
 type MyMuralsProps = {
   gateway?: MuralGateway;
   photoGateway?: MuralPhotoGateway;
+  mode?: "collection" | "create";
 };
 
 type CreationAttempt = {
@@ -237,7 +238,7 @@ function MuralPhotoCard({ mural, photoGateway }: MuralPhotoCardProps) {
   );
 }
 
-function MobileNavigation() {
+function MobileNavigation({ mode = "collection" }: { mode?: "collection" | "create" }) {
   return (
     <nav className="mobile-bottom-navigation" aria-label="Navegação móvel">
       <a className="mobile-nav-item" href="/" aria-label="Início">
@@ -246,7 +247,11 @@ function MobileNavigation() {
         </svg>
         <span>Início</span>
       </a>
-      <a className="mobile-nav-item is-active" href="/meus-murais" aria-current="page">
+      <a
+        className={`mobile-nav-item${mode === "collection" ? " is-active" : ""}`}
+        href="/meus-murais"
+        aria-current={mode === "collection" ? "page" : undefined}
+      >
         <svg viewBox="0 0 24 24" aria-hidden="true">
           <path d="m12 3 9 5-9 5-9-5 9-5Z" />
           <path d="m3 12 9 5 9-5M3 16l9 5 9-5" />
@@ -256,7 +261,12 @@ function MobileNavigation() {
       <a className="mobile-nav-create" href="/criar" aria-label="Criar aniversário">
         <span aria-hidden="true">+</span>
       </a>
-      <a className="mobile-nav-item" href="/criar" aria-label="Modo Aniversário">
+      <a
+        className={`mobile-nav-item${mode === "create" ? " is-active" : ""}`}
+        href="/criar"
+        aria-label="Modo Aniversário"
+        aria-current={mode === "create" ? "page" : undefined}
+      >
         <svg viewBox="0 0 24 24" aria-hidden="true">
           <rect x="3" y="3" width="7" height="7" rx="1" />
           <rect x="14" y="3" width="7" height="7" rx="1" />
@@ -276,7 +286,11 @@ function MobileNavigation() {
   );
 }
 
-export function MyMurals({ gateway: providedGateway, photoGateway: providedPhotoGateway }: MyMuralsProps) {
+export function MyMurals({
+  gateway: providedGateway,
+  photoGateway: providedPhotoGateway,
+  mode = "collection",
+}: MyMuralsProps) {
   const gateway = providedGateway ?? muralApiGateway;
   const photoGateway =
     providedPhotoGateway ?? (providedGateway ? null : muralPhotoApiGateway);
@@ -511,7 +525,7 @@ export function MyMurals({ gateway: providedGateway, photoGateway: providedPhoto
     : 0;
 
   return (
-    <div className={`memora-shell mural-shell ${styles.muralCollection}`}>
+    <div className={`memora-shell mural-shell ${styles.muralCollection}${mode === "create" ? ` ${styles.createMode}` : ""}`}>
       <BrandHeader activePage="murals" />
 
       <main className="mural-main" aria-busy={isBusy}>
@@ -559,6 +573,7 @@ export function MyMurals({ gateway: providedGateway, photoGateway: providedPhoto
                     name="title"
                     type="text"
                     autoComplete="off"
+                    placeholder="Ex.: Niver da Clarice"
                     value={title}
                     aria-invalid={Boolean(fieldErrors.title)}
                     aria-describedby={
@@ -745,8 +760,8 @@ export function MyMurals({ gateway: providedGateway, photoGateway: providedPhoto
                           Voltar a Todos
                         </button>
                       )}
-                      {statusFilter === "ALL" && (
-                          <a className="button button-primary" href="/criar">
+                      {statusFilter === "ALL" && mode !== "create" && (
+                        <a className="button button-primary" href="/criar">
                           Criar aniversário
                         </a>
                       )}
@@ -803,7 +818,7 @@ export function MyMurals({ gateway: providedGateway, photoGateway: providedPhoto
         <span>Memora</span>
         <span>Suas histórias merecem ser guardadas.</span>
       </footer>
-      <MobileNavigation />
+      <MobileNavigation mode={mode} />
     </div>
   );
 }
